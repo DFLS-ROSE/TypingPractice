@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-old-*/
+RELEASE_NOTES.md
 build/*.pfx
 build/*.cer
 build/*.p12
