@@ -1,0 +1,19 @@
+{
+  "articles": [
+    {
+      "id": "art-1",
+      "name": "关于练习",
+      "text": "Deliberate practice is the secret behind every skill that looks effortless. A pianist does not simply play for hours; she isolates the measure that breaks down and repeats it until the fingers stop arguing. The same rule applies to typing. Choose a short passage, type it slowly, and fix every mistake before moving on. Accuracy first, speed second, and the speed will arrive on its own schedule."
+    },
+    {
+      "id": "art-2",
+      "name": "指尖的节奏",
+      "text": "Good typing feels like a steady rhythm rather than a race. Your wrists stay light, your fingers curl gently, and each key gets a short, clean press. When tension creeps into your shoulders, pause and shake out your hands. A relaxed typist makes fewer errors and types for longer without fatigue. Breathe evenly and let the words come at their own pace."
+    },
+    {
+      "id": "art-3",
+      "name": "从错误中学习",
+      "text": "Every mistake on the screen is useful information. If you keep missing the same key, that key has not yet earned a place in your muscle memory. Slow down around it, say the finger assignment out loud, and press it deliberately ten times in a row. Most beginners are surprised how quickly a stubborn key becomes automatic once it gets a little focused attention."
+    }
+  ]
+}

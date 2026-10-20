@@ -1,0 +1,87 @@
+{
+  "fingerColors": {
+    "l5": "#E24B4A",
+    "l4": "#EF9F27",
+    "l3": "#639922",
+    "l2": "#378ADD",
+    "r2": "#378ADD",
+    "r3": "#639922",
+    "r4": "#EF9F27",
+    "r5": "#E24B4A",
+    "th": "#888780"
+  },
+  "homeKeys": ["a", "s", "d", "f", "j", "k", "l", ";"],
+  "rows": [
+    [
+      { "base": "`", "shift": "~", "finger": "l5" },
+      { "base": "1", "shift": "!", "finger": "l5" },
+      { "base": "2", "shift": "@", "finger": "l4" },
+      { "base": "3", "shift": "#", "finger": "l3" },
+      { "base": "4", "shift": "$", "finger": "l2" },
+      { "base": "5", "shift": "%", "finger": "l2" },
+      { "base": "6", "shift": "^", "finger": "r2" },
+      { "base": "7", "shift": "&", "finger": "r2" },
+      { "base": "8", "shift": "*", "finger": "r3" },
+      { "base": "9", "shift": "(", "finger": "r4" },
+      { "base": "0", "shift": ")", "finger": "r5" },
+      { "base": "-", "shift": "_", "finger": "r5" },
+      { "base": "=", "shift": "+", "finger": "r5" },
+      { "base": "Backspace", "label": "⌫ Bksp", "finger": "r5", "w": 2 }
+    ],
+    [
+      { "base": "Tab", "label": "Tab", "finger": "l5", "w": 1.5 },
+      { "base": "q", "finger": "l5" },
+      { "base": "w", "finger": "l4" },
+      { "base": "e", "finger": "l3" },
+      { "base": "r", "finger": "l2" },
+      { "base": "t", "finger": "l2" },
+      { "base": "y", "finger": "r2" },
+      { "base": "u", "finger": "r2" },
+      { "base": "i", "finger": "r3" },
+      { "base": "o", "finger": "r4" },
+      { "base": "p", "finger": "r5" },
+      { "base": "[", "shift": "{", "finger": "r5" },
+      { "base": "]", "shift": "}", "finger": "r5" },
+      { "base": "\\", "shift": "|", "finger": "r5", "w": 1.5 }
+    ],
+    [
+      { "base": "CapsLock", "label": "Caps", "finger": "l5", "w": 1.75 },
+      { "base": "a", "finger": "l5" },
+      { "base": "s", "finger": "l4" },
+      { "base": "d", "finger": "l3" },
+      { "base": "f", "finger": "l2" },
+      { "base": "g", "finger": "l2" },
+      { "base": "h", "finger": "r2" },
+      { "base": "j", "finger": "r2" },
+      { "base": "k", "finger": "r3" },
+      { "base": "l", "finger": "r4" },
+      { "base": ";", "shift": ":", "finger": "r5" },
+      { "base": "'", "shift": "\"", "finger": "r5" },
+      { "base": "Enter", "label": "Enter ⏎", "finger": "r5", "w": 2.25 }
+    ],
+    [
+      { "base": "Shift", "label": "Shift", "finger": "l5", "w": 2.25 },
+      { "base": "z", "finger": "l5" },
+      { "base": "x", "finger": "l4" },
+      { "base": "c", "finger": "l3" },
+      { "base": "v", "finger": "l2" },
+      { "base": "b", "finger": "l2" },
+      { "base": "n", "finger": "r2" },
+      { "base": "m", "finger": "r2" },
+      { "base": ",", "shift": "<", "finger": "r3" },
+      { "base": ".", "shift": ">", "finger": "r4" },
+      { "base": "/", "shift": "?", "finger": "r5" },
+      { "base": "Shift", "label": "Shift", "finger": "r5", "w": 2.75 }
+    ],
+    [
+      { "base": "Ctrl", "label": "Ctrl", "finger": "l5" },
+      { "base": "Win", "label": "Win", "finger": "l5" },
+      { "base": "Alt", "label": "Alt", "finger": "l5" },
+      { "base": " ", "label": "Space", "finger": "th", "w": 6.25 },
+      { "base": "Alt", "label": "Alt", "finger": "r5" },
+      { "base": "Win", "label": "Win", "finger": "r5" },
+      { "base": "Menu", "label": "Menu", "finger": "r5" },
+      { "base": "Ctrl", "label": "Ctrl", "finger": "r5" }
+    ]
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "name": "typingpractice",
+  "version": "1.0.2",
+  "description": "阶段式打字学习练习软件，参考金山打字通",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "icon": "node scripts/gen-icon.mjs",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win"
+  },
+  "license": "MIT",
+  "build": {
+    "appId": "com.typingpractice.app",
+    "productName": "TypingPractice",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "data/**/*",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "TypingPractice",
+      "installerLanguages": [
+        "zh_CN"
+      ],
+      "artifactName": "TypingPractice-Setup-${version}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3"
+  }
+}

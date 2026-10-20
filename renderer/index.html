@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' app:; img-src 'self' data:">
+  <title>TypingPractice</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand">Typing<span>Practice</span></div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="tutorial">打字教程</button>
+        <button class="nav-item" data-view="practice">素材练习</button>
+        <button class="nav-item" data-view="test">速度测试</button>
+        <button class="nav-item" data-view="stats">成绩统计</button>
+        <button class="nav-item hidden" id="nav-session" data-view="session">继续练习</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-item" data-view="settings">设置</button>
+      </div>
+    </aside>
+    <main class="content" id="content"></main>
+  </div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

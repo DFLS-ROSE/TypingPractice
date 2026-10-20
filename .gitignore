@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-old-*/
+build/*.pfx
+build/*.cer
+build/*.p12
+*.log
+.DS_Store

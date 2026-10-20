@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "starThresholds": {
+    "two": {
+      "wpm": 15,
+      "accuracy": 90
+    },
+    "three": {
+      "wpm": 25,
+      "accuracy": 95
+    }
+  },
+  "stages": [
+    {
+      "id": "s1",
+      "name": "S1 认识键盘",
+      "desc": "熟悉键位分区、打字姿势和指法分工，建立不看键盘的基础",
+      "sections": [
+        {
+          "id": "s1-1",
+          "name": "指法分工入门",
+          "keys": "asdf jkl;",
+          "desc": "左手小指到右手小指各管一片键位，先用基准键感受八个手指的分工",
+          "text": "asdf jkl; asdf jkl; asdf jkl; fdsa ;lkj fdsa ;lkj asdf jkl;"
+        },
+        {
+          "id": "s1-2",
+          "name": "八个基准键",
+          "keys": "a s d f j k l ;",
+          "desc": "F 和 J 键上的小凸起是食指定位点，双手食指搭在上面，其余手指自然落位",
+          "text": "fff jjj fjj jff fjf jfj ddd kkk dkd kdk sss lll sls lsl aaa ;;;"
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "name": "S2 基准键练习",
+      "desc": "把基准键练到盲打水平，这是之后所有练习的地基",
+      "sections": [
+        {
+          "id": "s2-1",
+          "name": "基准键组合",
+          "keys": "asdf jkl;",
+          "desc": "两指组合击键，注意每击一键手指立即归位",
+          "text": "as df jk fl dj sk la; ja fj dk sl ;a sd jf kl ad ls aj f;"
+        },
+        {
+          "id": "s2-2",
+          "name": "基准键单词",
+          "keys": "asdf jkl;",
+          "desc": "用基准键组成的常用单词，练习连贯击键",
+          "text": "as all fall salad glass half flask dad lad ask sad adds glad"
+        },
+        {
+          "id": "s2-3",
+          "name": "基准键句子",
+          "keys": "asdf jkl;",
+          "desc": "加入空格和大小写，接近真实输入场景",
+          "text": "A lad ask dad if all fall salad glass flask half adds glad"
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "name": "S3 上排键练习",
+      "desc": "向上延伸一行，攻克 QWERT / YUIOP 键位",
+      "sections": [
+        {
+          "id": "s3-1",
+          "name": "上排键位",
+          "keys": "q w e r t y u i o p",
+          "desc": "从上排击键后，手指要立刻回到基准键",
+          "text": "qqq www eee rrr ttt yyy uuu iii ooo ppp qw er ty ui op pq"
+        },
+        {
+          "id": "s3-2",
+          "name": "上排单词",
+          "keys": "qwert yuiop",
+          "desc": "含上排字母的常用词，注意手指跨度",
+          "text": "quiet report tower power your type write order pour yet you true"
+        },
+        {
+          "id": "s3-3",
+          "name": "上下行混合",
+          "keys": "qwert asdf",
+          "desc": "基准行与上排交替，巩固手指记忆",
+          "text": "The quiet power of a report tower was a great test for us all"
+        }
+      ]
+    },
+    {
+      "id": "s4",
+      "name": "S4 下排键练习",
+      "desc": "向下延伸一行，攻克 ZXCV / BNM 键位并认识 Shift",
+      "sections": [
+        {
+          "id": "s4-1",
+          "name": "下排键位",
+          "keys": "z x c v b n m",
+          "desc": "下排击键同样要归位，注意无名指和小指的协调",
+          "text": "zzz xxx ccc vvv bbb nnn mmm zx cv bn mn xz vc nb nm zzz"
+        },
+        {
+          "id": "s4-2",
+          "name": "下排单词",
+          "keys": "zxcv bnm",
+          "desc": "含下排字母的常用词",
+          "text": "zinc cube van ban man move zone cave next verb comb mine"
+        },
+        {
+          "id": "s4-3",
+          "name": "三行混合",
+          "keys": "主键区综合",
+          "desc": "上中下三行混合，Shift 换挡开始登场",
+          "text": "A man can move a zinc cube into the cave and come back soon"
+        }
+      ]
+    },
+    {
+      "id": "s5",
+      "name": "S5 数字与符号",
+      "desc": "攻克数字行和符号键，这是提速的关键一跳",
+      "sections": [
+        {
+          "id": "s5-1",
+          "name": "数字键位",
+          "keys": "1 2 3 4 5 6 7 8 9 0",
+          "desc": "数字行离基准行最远，需要刻意练习手指跨度",
+          "text": "111 222 333 444 555 666 777 888 999 000 1234 5678 9012 3456"
+        },
+        {
+          "id": "s5-2",
+          "name": "符号键位",
+          "keys": "! @ # $ % ^ & * ( )",
+          "desc": "符号大多需要 Shift 配合，注意左右手分工",
+          "text": "!!! @@@ ### $$$ %%% ^^^ &&& *** ()() -- == ++ ;; '' ,, .. //"
+        },
+        {
+          "id": "s5-3",
+          "name": "数字符号混合",
+          "keys": "数字 + 符号",
+          "desc": "接近真实输入的场景",
+          "text": "Buy 2 pens at $1.50 each, that is 100% of a $3.00 order #42"
+        }
+      ]
+    },
+    {
+      "id": "s6",
+      "name": "S6 综合文章",
+      "desc": "用完整文章检验盲打成果，向实用速度冲刺",
+      "sections": [
+        {
+          "id": "s6-1",
+          "name": "经典短句",
+          "keys": "综合",
+          "desc": "包含全部字母的经典句子",
+          "text": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs."
+        },
+        {
+          "id": "s6-2",
+          "name": "常用句型",
+          "keys": "综合",
+          "desc": "切换自由模式，允许退格修正，追求流畅",
+          "text": "Practice makes perfect. Typing is a skill that grows a little every single day you show up."
+        },
+        {
+          "id": "s6-3",
+          "name": "短文练习",
+          "keys": "综合",
+          "desc": "较长文本，锻炼耐力与稳定性",
+          "text": "Learning to type without looking at the keyboard takes patience. Start slow, keep your wrists relaxed, and let your fingers learn the way home. Speed is a byproduct of accuracy, so do not chase it. With twenty minutes of daily practice, most people reach forty words per minute within a month and keep improving from there."
+        }
+      ]
+    }
+  ]
+}
