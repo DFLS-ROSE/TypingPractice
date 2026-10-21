@@ -97,9 +97,7 @@ npm run smoke   # GUI 冒烟：自动驱动界面跑 5 条链路（下一节/测
 npm run dist
 ```
 
-产物在 `dist/`：`TypingPractice-Setup-<版本>.exe`（NSIS 安装包，可选安装目录、中文安装界面、桌面 + 开始菜单快捷方式）和 `win-unpacked/`（免安装绿色版）。
-
-**自动裁剪（让安装包从 ~106 MiB 降到 ~97.5 MiB）**：`electron-builder.js` 的 `afterPack` 钩子会删掉 20MB 的 Chromium 许可证全文（换一份精简说明）和 53 个非中英语言包（保留 zh-CN / en-US）。注意 `dxcompiler` / `d3dcompiler_47` / `dxil` / `vk_swiftshader` / `vulkan-1` / `ffmpeg` **一个都不能删**——即使禁用硬件加速，Chromium 仍会初始化 ANGLE/SwiftShader 与媒体栈，缺任一个都会让渲染进程崩溃（已实测）。若在会拦截批量文件删除的环境里打包，用 `SKIP_PRUNE=1` 跳过钩子，改为外部裁剪后 `npx electron-builder --prepackaged dist/win-unpacked --win` 生成安装包。
+产物在 `dist/`：`TypingPractice-Setup-<版本>.exe`（NSIS 安装包，可选安装目录、中文安装界面、桌面 + 开始菜单快捷方式）和 `win-unpacked/`（免安装绿色版）。完整安装包约 106 MiB（Electron 运行时占大头）。
 
 **代码签名**（可选）：未签名时 SmartScreen 会提示「未知发布者」，需手动「更多信息 → 仍要运行」。有代码签名证书（PFX）时：
 
@@ -112,7 +110,7 @@ npm run dist
 
 签名 ≠ 一定不弹 SmartScreen：新证书 / 低下载量仍会被拦，需要积累下载信誉。个人版代码签名证书约 650–680 元/年（Certum，阿里云市场可个人申请）。
 
-**分发渠道限制**：Gitee 发行版单附件 ≤ 100M、单仓库附件总量 ≤ 1G——本安装包 97.5 MiB 可直接上传。若仍超限可分卷（`7z a -v90m 安装包.exe`，用户用 7z 打开任一卷自动合并），或改用 GitHub Releases（单文件 2G）/ 对象存储直链。
+**分发渠道限制**：Gitee 发行版单附件 ≤ 100M、单仓库附件总量 ≤ 1G——完整安装包约 106 MiB，**超出限制**。可选方案：改用 GitHub Releases（单文件 2G，无需分卷）、对象存储直链（腾讯云 COS / 蓝奏云），或分卷上传（`7z a -v90m 安装包.exe`，用户用 7z 打开任一卷自动合并）。历史上曾用 `afterPack` 钩子裁掉 Chromium 许可证全文与非中英语言包，把包压到 97.5 MiB 以适配 Gitee（见提交 `e6b177e`），但该裁剪已按需求移除。
 
 ## 数据存在哪
 
