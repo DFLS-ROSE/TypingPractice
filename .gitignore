@@ -8,3 +8,4 @@ build/*.cer
 build/*.p12
 *.log
 .DS_Store
+zip.py
