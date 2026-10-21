@@ -294,9 +294,19 @@ if (new URLSearchParams(location.search).has('smoke')) {
       press('Z');
       await new Promise((r) => setTimeout(r, 80));
       const freeDone = document.querySelectorAll('.typing-text .ch.done').length;
+      // 退格撤回 → 错字符标注消失
+      press('Backspace');
+      await new Promise((r) => setTimeout(r, 80));
+      const backspaceCleared = !document.querySelector('.ch-wrong');
+      // 改对 → 标注依旧不显示，但该位仍标记为错过（记录保留）
+      const second = document.querySelectorAll('.typing-text .ch')[1].textContent;
+      press(second === '\u00A0' ? ' ' : second);
+      await new Promise((r) => setTimeout(r, 80));
+      const stillNoWrong = !document.querySelector('.ch-wrong');
+      const errKept = document.querySelectorAll('.typing-text .ch')[1].classList.contains('err');
       const modeTag = (document.querySelector('.mode-tag') || {}).textContent || '';
 
-      return { strictDone, strictWrong, freeDone, modeTag };
+      return { strictDone, strictWrong, freeDone, backspaceCleared, stillNoWrong, errKept, modeTag };
     },
 
     async driveSessionKeepAlive() {

@@ -57,6 +57,7 @@ export class TypingEngine {
 
     if (key === 'Backspace') {
       if (this.mode === 'free' && this.pos > 0) {
+        // 只回退位置，错误记录保留：改对仍算错过（准确率照罚、该位仍标红）
         this.pos -= 1;
         this._emit();
         return { type: 'back' };

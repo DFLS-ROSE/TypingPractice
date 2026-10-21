@@ -80,7 +80,10 @@ export async function createSession(opts) {
   textEl.appendChild(frag);
 
   // 打错的字符：位置 → 实际打出的字符，显示在期望字符正上方
+  // pendingWrong：该位最近一次尝试是错的且尚未改对 —— 只有这些位才显示标注
+  // （改对/退格撤回后不显示，但 charErrors 记录保留，该位仍然标红）
   const wrongTyped = new Map();
+  const pendingWrong = new Set();
   const wrongEls = new Array(spans.length).fill(null);
 
   function displayChar(ch) {
@@ -93,7 +96,7 @@ export async function createSession(opts) {
     const sp = spans[idx];
     if (!sp) return;
     const typed = wrongTyped.get(idx);
-    if (!typed) {
+    if (!typed || !pendingWrong.has(idx)) {
       if (wrongEls[idx]) wrongEls[idx].remove();
       wrongEls[idx] = null;
       return;
@@ -174,7 +177,17 @@ export async function createSession(opts) {
     const consumable = e.key.length === 1 || ['Backspace', 'Tab', 'Enter'].includes(e.key);
     if (consumable) e.preventDefault();
     const res = engine.handleKey(e.key, e);
-    if (res.type === 'correct' && keyboard) keyboard.flash(e.key === 'Enter' ? '\n' : e.key);
+    if (res.type === 'correct') {
+      if (keyboard) keyboard.flash(e.key === 'Enter' ? '\n' : e.key);
+      // 该位已改对：撤掉错字符标注（错误记录保留，该位仍然标红）
+      const doneIdx = engine.pos - 1;
+      if (pendingWrong.delete(doneIdx)) paintWrong(doneIdx);
+    }
+    if (res.type === 'back') {
+      // 退格撤回：先撤掉标注，重新打错会按新字符显示
+      const backIdx = engine.pos;
+      if (pendingWrong.delete(backIdx)) paintWrong(backIdx);
+    }
     if (res.type === 'error') {
       if (keyboard) keyboard.flashError(res.expected);
       const idx = engine.mode === 'free' ? engine.pos - 1 : engine.pos;
@@ -185,6 +198,7 @@ export async function createSession(opts) {
       }
       // 把实际打出的字符记下来，显示在期望字符上方
       wrongTyped.set(idx, displayChar(res.typed));
+      pendingWrong.add(idx);
       paintWrong(idx);
     }
   }

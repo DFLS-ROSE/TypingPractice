@@ -72,5 +72,22 @@ check('星级: 仅二星达标给 2 星', evalStars({ finished: true, wpm: 20, a
 check('星级: 完成但未达标给 1 星', evalStars({ finished: true, wpm: 5, accuracy: 80 }, two, three) === 1);
 check('星级: 未完成给 0 星', evalStars({ finished: false, wpm: 30, accuracy: 96 }, two, three) === 0);
 
+// 自由模式退格：只回退位置，错误记录保留（改对仍算错过）
+const fix = new TypingEngine('abc', { mode: 'free' });
+fix.handleKey('a', keyEvent());
+fix.handleKey('Z', keyEvent());
+check('free: 打错后记录错误', fix.charErrors[1] === 1);
+fix.handleKey('Backspace', keyEvent());
+check('free: 退格只回退位置', fix.pos === 1);
+fix.handleKey('b', keyEvent());
+check('free: 退格后改对仍保留错误记录', fix.charErrors[1] === 1 && fix.pos === 2);
+
+const fix2 = new TypingEngine('abc', { mode: 'free' });
+fix2.handleKey('a', keyEvent());
+fix2.handleKey('Z', keyEvent());
+fix2.handleKey('Backspace', keyEvent());
+fix2.handleKey('Q', keyEvent());
+check('free: 退格后改错同样保留记录（累计两次错误）', fix2.charErrors[1] === 2 && fix2.pos === 2);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
