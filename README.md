@@ -2,7 +2,7 @@
 
 参考**金山打字通**的阶段性打字学习练习软件。Electron + 原生 HTML/CSS/JS（ES Modules，**零构建链**），课程与素材全部 JSON 数据驱动——加一节课、换一段练习文本都不用碰代码。
 
-- 版本：v1.0.2 ｜ 平台：Windows x64 ｜ 许可：MIT
+- 版本：v1.0.3 ｜ 平台：Windows x64 ｜ 许可：MIT
 
 ## 功能
 
@@ -34,7 +34,8 @@ npm start
 TypingPractice/
 ├── main.js                 # 主进程：app:// 协议、IPC、成绩持久化
 ├── preload.js              # contextBridge，向渲染层暴露 window.api
-├── package.json            # 依赖 + electron-builder 打包配置
+├── electron-builder.js     # 打包配置（appId / NSIS / files 白名单）
+├── package.json            # 依赖与脚本（start / test / dist）
 ├── renderer/
 │   ├── index.html          # 入口（CSP 已配置）
 │   ├── css/style.css
@@ -42,7 +43,7 @@ TypingPractice/
 │       ├── app.js          # 导航、会话管理、成绩保存（串行化）
 │       ├── engine.js       # 打字引擎 + 星级评定（纯逻辑，可单测）
 │       ├── keyboard.js     # 虚拟键盘
-│       ├── session.js      # 练习界面（计时、结果面板、模式切换、暂停/恢复）
+│       ├── session.js      # 练习界面（计时、结果面板、模式切换、错字符标注、暂停/恢复）
 │       ├── storage.js      # JSON 加载 + userData 读写封装
 │       └── views/          # tutorial / practice / test / stats / settings
 ├── data/                   # 全部数据，改这里就等于改内容
@@ -52,8 +53,9 @@ TypingPractice/
 ├── scripts/
 │   ├── gen-icon.mjs        # 生成应用图标 build/icon.png
 │   └── repair-records.mjs  # 清洗异常练习记录
-├── test/engine.test.mjs    # 引擎单元测试（24 项）
-└── build/icon.png
+├── test/engine.test.mjs    # 引擎单元测试（28 项）
+├── build/icon.png          # 应用图标（npm run icon 可重新生成）
+└── README.md               # 本文档；RELEASE_NOTES.md 仅本机维护（已 gitignore）
 ```
 
 ## 添加练习素材
@@ -85,7 +87,7 @@ TypingPractice/
 ## 测试
 
 ```bash
-npm test        # 引擎单元测试（24 项，纯逻辑）
+npm test        # 引擎单元测试（28 项，纯逻辑）
 npm run smoke   # GUI 冒烟：自动驱动界面跑 5 条链路（下一节/测试选项/模式切换/切页保活/素材导入）
 ```
 
