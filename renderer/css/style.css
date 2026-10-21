@@ -184,6 +184,32 @@ button { font-family: inherit; color: inherit; }
   25% { transform: translateX(-2px); }
   75% { transform: translateX(2px); }
 }
+/* 打错时，在期望字符正上方显示实际打出的字符 */
+.ch { position: relative; }
+.ch-wrong {
+  position: absolute;
+  left: 50%;
+  top: -1.15em;
+  transform: translateX(-50%);
+  font-size: 12.5px;
+  line-height: 1;
+  color: var(--red);
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.typing-legend {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatch-cur { background: var(--accent); }
+.swatch-err { background: var(--red); }
+.swatch-wrong { background: transparent; border: 1px solid var(--red); }
 
 .keyboard-wrap { margin-top: 2px; }
 .vkeyboard {

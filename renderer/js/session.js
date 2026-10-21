@@ -48,6 +48,11 @@ export async function createSession(opts) {
     </div>
     <div class="typing-area">
       <div class="typing-text"></div>
+      <div class="typing-legend">
+        <span class="legend-item"><i class="swatch swatch-cur"></i>当前键</span>
+        <span class="legend-item"><i class="swatch swatch-err"></i>打错</span>
+        <span class="legend-item"><i class="swatch swatch-wrong"></i>红字＝实际打出的字符</span>
+      </div>
     </div>
     <div class="keyboard-wrap hidden"></div>
     <div class="session-result hidden">
@@ -73,6 +78,35 @@ export async function createSession(opts) {
     spans.push(sp);
   }
   textEl.appendChild(frag);
+
+  // 打错的字符：位置 → 实际打出的字符，显示在期望字符正上方
+  const wrongTyped = new Map();
+  const wrongEls = new Array(spans.length).fill(null);
+
+  function displayChar(ch) {
+    if (ch === '\n' || ch === 'Enter') return '⏎';
+    if (ch === ' ') return '␣';
+    return ch;
+  }
+
+  function paintWrong(idx) {
+    const sp = spans[idx];
+    if (!sp) return;
+    const typed = wrongTyped.get(idx);
+    if (!typed) {
+      if (wrongEls[idx]) wrongEls[idx].remove();
+      wrongEls[idx] = null;
+      return;
+    }
+    let el = wrongEls[idx];
+    if (!el) {
+      el = document.createElement('span');
+      el.className = 'ch-wrong';
+      sp.appendChild(el);
+      wrongEls[idx] = el;
+    }
+    if (el.textContent !== typed) el.textContent = typed;
+  }
 
   let keyboard = null;
   if (showKeyboard) {
@@ -100,6 +134,7 @@ export async function createSession(opts) {
       sp.classList.toggle('done', i < engine.pos);
       sp.classList.toggle('err', i < engine.pos && engine.charErrors[i] > 0);
       sp.classList.toggle('cur', i === engine.pos && !engine.finished);
+      paintWrong(i);
     }
     const cur = spans[engine.pos];
     if (cur) cur.scrollIntoView({ block: 'nearest' });
@@ -148,6 +183,9 @@ export async function createSession(opts) {
         sp.classList.add('wrong');
         setTimeout(() => sp.classList.remove('wrong'), 300);
       }
+      // 把实际打出的字符记下来，显示在期望字符上方
+      wrongTyped.set(idx, displayChar(res.typed));
+      paintWrong(idx);
     }
   }
 
@@ -231,6 +269,7 @@ export async function createSession(opts) {
     e.currentTarget.blur();
     finished = false;
     engine.reset();
+    wrongTyped.clear();
     root.querySelector('.session-result').classList.add('hidden');
     paint();
     paintStats();

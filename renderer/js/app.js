@@ -287,6 +287,7 @@ if (new URLSearchParams(location.search).has('smoke')) {
       press('Z');
       await new Promise((r) => setTimeout(r, 80));
       const strictDone = document.querySelectorAll('.typing-text .ch.done').length;
+      const strictWrong = (document.querySelector('.ch-wrong') || {}).textContent || '';
 
       // 自由模式：错误键也继续前进
       document.querySelector('.mode-switch .opt[data-mode="free"]').click();
@@ -295,7 +296,7 @@ if (new URLSearchParams(location.search).has('smoke')) {
       const freeDone = document.querySelectorAll('.typing-text .ch.done').length;
       const modeTag = (document.querySelector('.mode-tag') || {}).textContent || '';
 
-      return { strictDone, freeDone, modeTag };
+      return { strictDone, strictWrong, freeDone, modeTag };
     },
 
     async driveSessionKeepAlive() {
