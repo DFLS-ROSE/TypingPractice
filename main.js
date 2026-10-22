@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain, protocol, shell } = require('electr
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
+const { autoUpdater } = require('electron-updater');
 
 // 本软件是纯 DOM 界面，禁用硬件加速，避免个别机器上 GPU 进程崩溃
 app.disableHardwareAcceleration();
@@ -113,6 +114,7 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+  initAutoUpdater();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -166,6 +168,74 @@ ipcMain.handle('app:openReleases', async () => {
     return { ok: false, message: '尚未配置发行页地址（package.json 的 releaseUrl）' };
   }
   await shell.openExternal(pkg.releaseUrl);
+  return { ok: true };
+});
+
+// ============ 自动更新（electron-updater + GitHub Releases）============
+// 只在打包后的应用中启用；开发模式下不检查，避免无谓的网络请求与错误噪音
+let updateState = { status: 'idle', version: '', percent: 0, message: '' };
+
+function setUpdateState(patch) {
+  updateState = { ...updateState, ...patch };
+  // 推送给渲染层（设置页订阅 update:state）
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update:state', updateState);
+  }
+}
+
+function initAutoUpdater() {
+  if (!app.isPackaged) return;
+
+  // 不自动下载：检查到新版本后由用户点「下载并安装」，配合进度显示
+  autoUpdater.autoDownload = false;
+
+  autoUpdater.on('checking-for-update', () => {
+    setUpdateState({ status: 'checking', percent: 0, message: '正在检查更新…' });
+  });
+  autoUpdater.on('update-available', (info) => {
+    setUpdateState({ status: 'available', version: info.version, message: `发现新版本 v${info.version}` });
+  });
+  autoUpdater.on('update-not-available', () => {
+    setUpdateState({ status: 'not-available', message: '已是最新版本' });
+  });
+  autoUpdater.on('download-progress', (p) => {
+    const percent = Math.round(p.percent || 0);
+    setUpdateState({ status: 'downloading', percent, message: `下载中 ${percent}%` });
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    setUpdateState({ status: 'downloaded', version: info.version, message: '新版本已就绪，重启后生效' });
+  });
+  autoUpdater.on('error', (err) => {
+    setUpdateState({ status: 'error', message: `更新检查失败：${err && err.message ? err.message : err}` });
+  });
+}
+
+ipcMain.handle('app:checkUpdate', async () => {
+  if (!app.isPackaged) {
+    setUpdateState({ status: 'dev', message: '开发模式下不检查更新' });
+    return { ok: false, dev: true };
+  }
+  try {
+    await autoUpdater.checkForUpdates();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: err.message };
+  }
+});
+
+ipcMain.handle('app:downloadUpdate', async () => {
+  if (!app.isPackaged) return { ok: false, dev: true };
+  try {
+    await autoUpdater.downloadUpdate();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: err.message };
+  }
+});
+
+ipcMain.handle('app:installUpdate', () => {
+  if (!app.isPackaged) return { ok: false, dev: true };
+  autoUpdater.quitAndInstall(false, true);
   return { ok: true };
 });
 

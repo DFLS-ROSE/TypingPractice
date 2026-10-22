@@ -353,7 +353,8 @@ if (new URLSearchParams(location.search).has('smoke')) {
       await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '设置视图就绪');
       const ver = (document.querySelector('[data-s="appver"]') || {}).textContent || '';
       const hasUpdateBtn = !!document.querySelector('#check-update');
-      return { ver, hasUpdateBtn };
+      const btnLabel = (document.querySelector('#check-update') || {}).textContent || '';
+      return { ver, hasUpdateBtn, btnLabel };
     }
   };
   if (window.api && window.api.smokeReady) window.api.smokeReady();

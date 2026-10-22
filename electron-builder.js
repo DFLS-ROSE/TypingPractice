@@ -26,5 +26,10 @@ module.exports = {
     shortcutName: 'TypingPractice',
     installerLanguages: ['zh_CN'],
     artifactName: 'TypingPractice-Setup-${version}.${ext}'
-  }
+  },
+  // 自动更新源：GitHub Releases（electron-updater 读取 Release 里的 latest.yml）
+  // 本地 npm run dist 不会自动上传，只有显式 --publish always 才发布
+  publish: [
+    { provider: 'github', owner: 'DFLS-ROSE', repo: 'TypingPractice' }
+  ]
 };

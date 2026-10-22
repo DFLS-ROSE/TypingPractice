@@ -76,6 +76,7 @@ export async function renderSettingsView(ctx) {
   // 当前版本：取自主进程的 package.json 版本号
   const verEl = root.querySelector('[data-s="appver"]');
   const updateMsg = root.querySelector('[data-s="update-msg"]');
+  const updateBtn = root.querySelector('#check-update');
   try {
     const v = await window.api.getVersion();
     verEl.textContent = `v${v}`;
@@ -83,16 +84,82 @@ export async function renderSettingsView(ctx) {
     verEl.textContent = '未知';
   }
 
-  root.querySelector('#check-update').addEventListener('click', async (e) => {
+  // 检查更新：开发模式下退化为「打开发行页」；打包后走完整的
+  // 检查 → 下载 → 重启安装 流程（electron-updater + GitHub Releases）
+  let state = { status: 'idle', percent: 0, message: '' };
+
+  function renderUpdate() {
+    const s = state;
+    switch (s.status) {
+      case 'dev':
+        updateBtn.textContent = '打开发行页';
+        updateBtn.disabled = false;
+        updateMsg.textContent = '开发模式下不检查更新';
+        break;
+      case 'checking':
+        updateBtn.textContent = '检查中…';
+        updateBtn.disabled = true;
+        updateMsg.textContent = s.message || '';
+        break;
+      case 'available':
+        updateBtn.textContent = '下载并安装';
+        updateBtn.disabled = false;
+        updateMsg.textContent = s.message || '';
+        break;
+      case 'downloading':
+        updateBtn.textContent = `下载中 ${s.percent}%`;
+        updateBtn.disabled = true;
+        updateMsg.textContent = s.message || '';
+        break;
+      case 'downloaded':
+        updateBtn.textContent = '重启并安装';
+        updateBtn.disabled = false;
+        updateMsg.textContent = s.message || '';
+        break;
+      case 'not-available':
+        updateBtn.textContent = '检查更新';
+        updateBtn.disabled = false;
+        updateMsg.textContent = s.message || '已是最新版本';
+        break;
+      case 'error':
+        updateBtn.textContent = '检查更新';
+        updateBtn.disabled = false;
+        updateMsg.textContent = s.message || '检查失败';
+        break;
+      default:
+        updateBtn.textContent = '检查更新';
+        updateBtn.disabled = false;
+        updateMsg.textContent = '';
+    }
+  }
+
+  const offUpdateState = window.api.onUpdateState((s) => {
+    state = s;
+    renderUpdate();
+  });
+
+  updateBtn.addEventListener('click', async (e) => {
     e.currentTarget.blur();
-    updateMsg.textContent = '正在打开发行页…';
-    try {
+    if (state.status === 'dev') {
+      updateMsg.textContent = '正在打开发行页…';
       const res = await window.api.openReleases();
       updateMsg.textContent = (res && res.ok) ? '已在浏览器中打开发行页' : (res && res.message) || '打开失败';
-    } catch (err) {
-      updateMsg.textContent = '打开失败';
+      return;
     }
+    if (state.status === 'available') {
+      updateMsg.textContent = '开始下载…';
+      await window.api.downloadUpdate();
+      return;
+    }
+    if (state.status === 'downloaded') {
+      await window.api.installUpdate();
+      return;
+    }
+    updateMsg.textContent = '正在检查更新…';
+    await window.api.checkUpdate();
   });
+
+  renderUpdate();
 
   root.querySelector('#clear-history').addEventListener('click', async () => {
     if (!confirm('确定清空全部练习记录和课程进度吗？此操作不可恢复。')) return;
@@ -104,5 +171,9 @@ export async function renderSettingsView(ctx) {
   });
 
   root.dataset.ready = '1';
-  return { cleanup() {} };
+  return {
+    cleanup() {
+      if (offUpdateState) offUpdateState();
+    }
+  };
 }

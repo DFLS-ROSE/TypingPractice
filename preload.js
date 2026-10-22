@@ -11,5 +11,13 @@ contextBridge.exposeInMainWorld('api', {
   importTextFile: () => ipcRenderer.invoke('data:importTextFile'),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   openReleases: () => ipcRenderer.invoke('app:openReleases'),
+  checkUpdate: () => ipcRenderer.invoke('app:checkUpdate'),
+  downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),
+  installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
+  onUpdateState: (cb) => {
+    const listener = (_e, state) => cb(state);
+    ipcRenderer.on('update:state', listener);
+    return () => ipcRenderer.removeListener('update:state', listener);
+  },
   smokeReady: () => ipcRenderer.send('smoke:ready')
 });
