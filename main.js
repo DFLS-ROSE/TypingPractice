@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, protocol } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, protocol, shell } = require('electron');
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
@@ -152,6 +152,23 @@ ipcMain.handle('data:importTextFile', async () => {
   return { name: path.basename(file, path.extname(file)), text };
 });
 
+// 版本信息与检查更新：版本取 package.json，发行页地址在 package.json 的 releaseUrl 配置
+ipcMain.handle('app:getVersion', () => app.getVersion());
+
+ipcMain.handle('app:openReleases', async () => {
+  let pkg;
+  try {
+    pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+  } catch (err) {
+    return { ok: false, message: '读取 package.json 失败' };
+  }
+  if (!pkg.releaseUrl) {
+    return { ok: false, message: '尚未配置发行页地址（package.json 的 releaseUrl）' };
+  }
+  await shell.openExternal(pkg.releaseUrl);
+  return { ok: true };
+});
+
 async function runSmokeDrive(name) {
   try {
     const result = await mainWindow.webContents.executeJavaScript(`window.__smoke.${name}()`);
@@ -169,6 +186,7 @@ ipcMain.on('smoke:ready', () => {
     await runSmokeDrive('driveModeSwitch');
     await runSmokeDrive('driveSessionKeepAlive');
     await runSmokeDrive('driveCustomMaterial');
+    await runSmokeDrive('driveSettings');
     setTimeout(() => app.quit(), 400);
   }, 300);
 });

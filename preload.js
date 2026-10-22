@@ -9,5 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   loadCustomMaterials: () => ipcRenderer.invoke('data:loadCustomMaterials'),
   saveCustomMaterials: (data) => ipcRenderer.invoke('data:saveCustomMaterials', data),
   importTextFile: () => ipcRenderer.invoke('data:importTextFile'),
+  getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  openReleases: () => ipcRenderer.invoke('app:openReleases'),
   smokeReady: () => ipcRenderer.send('smoke:ready')
 });
