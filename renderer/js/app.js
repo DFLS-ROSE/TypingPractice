@@ -346,6 +346,14 @@ if (new URLSearchParams(location.search).has('smoke')) {
 
       await window.api.saveCustomMaterials({ articles: [] });
       return { hasCustom, badge, total: names.length, firstName: names[0] || '' };
+    },
+
+    async driveSettings() {
+      document.querySelector('.nav-item[data-view="settings"]').click();
+      await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '设置视图就绪');
+      const ver = (document.querySelector('[data-s="appver"]') || {}).textContent || '';
+      const hasUpdateBtn = !!document.querySelector('#check-update');
+      return { ver, hasUpdateBtn };
     }
   };
   if (window.api && window.api.smokeReady) window.api.smokeReady();

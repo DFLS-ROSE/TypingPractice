@@ -22,6 +22,15 @@ export async function renderSettingsView(ctx) {
           </div>
         </div>
         <div class="opt-row">
+          <span class="opt-label">当前版本</span>
+          <span class="opt-value" data-s="appver">读取中…</span>
+        </div>
+        <div class="opt-row">
+          <span class="opt-label">检查更新</span>
+          <button class="btn" id="check-update">检查更新</button>
+          <span class="opt-hint" data-s="update-msg"></span>
+        </div>
+        <div class="opt-row">
           <span class="opt-label">成绩记录</span>
           <button class="btn danger" id="clear-history">清空全部记录</button>
         </div>
@@ -64,6 +73,27 @@ export async function renderSettingsView(ctx) {
     });
   });
 
+  // 当前版本：取自主进程的 package.json 版本号
+  const verEl = root.querySelector('[data-s="appver"]');
+  const updateMsg = root.querySelector('[data-s="update-msg"]');
+  try {
+    const v = await window.api.getVersion();
+    verEl.textContent = `v${v}`;
+  } catch (err) {
+    verEl.textContent = '未知';
+  }
+
+  root.querySelector('#check-update').addEventListener('click', async (e) => {
+    e.currentTarget.blur();
+    updateMsg.textContent = '正在打开发行页…';
+    try {
+      const res = await window.api.openReleases();
+      updateMsg.textContent = (res && res.ok) ? '已在浏览器中打开发行页' : (res && res.message) || '打开失败';
+    } catch (err) {
+      updateMsg.textContent = '打开失败';
+    }
+  });
+
   root.querySelector('#clear-history').addEventListener('click', async () => {
     if (!confirm('确定清空全部练习记录和课程进度吗？此操作不可恢复。')) return;
     await store.clearHistory();
@@ -73,5 +103,6 @@ export async function renderSettingsView(ctx) {
     alert('已清空');
   });
 
+  root.dataset.ready = '1';
   return { cleanup() {} };
 }
