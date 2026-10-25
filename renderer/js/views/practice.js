@@ -30,14 +30,16 @@ export async function renderPracticeView(ctx) {
   let articlesData;
   let wordsData;
   let progress;
-  let custom;
+  let custom;      // 导入的文章
+  let customLists; // 导入的词库
   try {
-    [layout, articlesData, wordsData, progress, custom] = await Promise.all([
+    [layout, articlesData, wordsData, progress, custom, customLists] = await Promise.all([
       loadJson('layout.json'),
       loadJson('materials/articles.json'),
       loadJson('materials/words.json'),
       ctx.store.progress(),
-      customMaterials.load()
+      customMaterials.loadArticles(),
+      customMaterials.loadLists()
     ]);
   } catch (err) {
     console.error('素材加载失败:', err);
@@ -49,15 +51,32 @@ export async function renderPracticeView(ctx) {
   const showKeyboard = settings.showKeyboard !== false;
   const defaultMode = settings.defaultMode === 'free' ? 'free' : 'strict';
 
-  // 导入的文章排在前面，带「导入」标记
+  // 当前激活的 tab：决定导入的 txt 归为文章还是词库（v1.0.5 修复：此前无论哪个 tab 都归为文章）
+  let activeTab = 'articles';
+
+  // 导入的素材排在前面，带「导入」标记
   let articles = [
     ...custom.map((a) => ({ ...a, custom: true })),
     ...articlesData.articles
   ];
+  let lists = [
+    ...customLists.map((l) => ({ ...l, custom: true })),
+    ...wordsData.lists
+  ];
+
+  // 按钮文案 / 提示随 tab 切换，让用户知道当前导入会变成什么
+  function syncImportUI() {
+    root.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === activeTab));
+    const asWords = activeTab === 'words';
+    importBtn.textContent = asWords ? '导入 txt 词库' : '导入 txt 文章';
+    root.querySelector('.list-hint').textContent = asWords
+      ? '英文单词，空格或换行分隔'
+      : '英文文本，多行也行';
+  }
 
   function renderList(kind) {
     listEl.innerHTML = '';
-    const items = kind === 'articles' ? articles : wordsData.lists;
+    const items = kind === 'articles' ? articles : lists;
     for (const entry of items) {
       const item = document.createElement('button');
       item.className = 'mat-item';
@@ -70,22 +89,21 @@ export async function renderPracticeView(ctx) {
         if (kind === 'articles') showArticle(entry);
         else showWords(entry);
       });
-      if (kind === 'articles' && entry.custom) {
+      if (entry.custom) {
         const del = document.createElement('button');
         del.className = 'mat-del';
         del.textContent = '×';
-        del.title = '删除这篇导入的文章';
+        del.title = kind === 'articles' ? '删除这篇导入的文章' : '删除这个导入的词库';
         del.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (!confirm(`删除导入的文章「${entry.name}」？`)) return;
-          customMaterials.remove(entry.id).then(async () => {
-            custom = await customMaterials.load();
-            articles = [
-              ...custom.map((a) => ({ ...a, custom: true })),
-              ...articlesData.articles
-            ];
+          const label = kind === 'articles' ? '文章' : '词库';
+          if (!confirm(`删除导入的${label}「${entry.name}」？`)) return;
+          const done = kind === 'articles'
+            ? customMaterials.removeArticle(entry.id)
+            : customMaterials.removeList(entry.id);
+          done.then(async () => {
+            await refreshMaterials();
             detailEl.innerHTML = `<div class="empty-hint">选择左侧素材开始练习</div>`;
-            renderList('articles');
           });
         });
         item.appendChild(del);
@@ -94,14 +112,26 @@ export async function renderPracticeView(ctx) {
     }
   }
 
-  async function refreshArticles() {
-    custom = await customMaterials.load();
+  // 重新拉取导入的素材并重绘当前 tab；selectFirst = 选中列表第一项（刚导入的那条）
+  async function refreshMaterials(selectFirst = false) {
+    custom = await customMaterials.loadArticles();
+    customLists = await customMaterials.loadLists();
     articles = [
       ...custom.map((a) => ({ ...a, custom: true })),
       ...articlesData.articles
     ];
-    root.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === 'articles'));
-    renderList('articles');
+    lists = [
+      ...customLists.map((l) => ({ ...l, custom: true })),
+      ...wordsData.lists
+    ];
+    renderList(activeTab);
+    if (selectFirst) {
+      const first = listEl.querySelector('.mat-item');
+      if (first) {
+        first.click();
+        first.scrollIntoView({ block: 'nearest' });
+      }
+    }
   }
 
   function showArticle(art) {
@@ -128,7 +158,7 @@ export async function renderPracticeView(ctx) {
 
   function showWords(wl) {
     detailEl.innerHTML = `
-      <div class="detail-crumb">素材库 · 词库</div>
+      <div class="detail-crumb">素材库 · 词库${wl.custom ? ' · 导入' : ''}</div>
       <h2 class="detail-title">${escapeHtml(wl.name)}</h2>
       <div class="opt-row">
         <span class="opt-label">练习数量</span>
@@ -166,8 +196,12 @@ export async function renderPracticeView(ctx) {
       });
     });
     detailEl.querySelector('[data-act="start"]').addEventListener('click', () => {
-      const words = [];
       const pool = wl.words.slice();
+      if (!pool.length) {
+        alert('这个词库是空的，没有可练的内容。');
+        return;
+      }
+      const words = [];
       while (words.length < count) {
         for (const w of shuffle(pool)) {
           words.push(w);
@@ -188,9 +222,9 @@ export async function renderPracticeView(ctx) {
 
   root.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
-      root.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-      renderList(tab.dataset.tab);
+      activeTab = tab.dataset.tab;
+      syncImportUI();
+      renderList(activeTab);
     });
   });
 
@@ -206,27 +240,38 @@ export async function renderPracticeView(ctx) {
         alert('这个文件是空的，没有可练的内容。');
         return;
       }
-      await customMaterials.add({
-        id: `custom-${Date.now()}`,
-        name: picked.name || '导入文章',
-        text,
-        importedAt: Date.now()
-      });
-      await refreshArticles();
-      const first = listEl.querySelector('.mat-item');
-      if (first) {
-        first.click();
-        first.scrollIntoView({ block: 'nearest' });
+      // v1.0.5 修复：按当前 tab 决定导入类型——文章 tab 存文章，词库 tab 存词库
+      if (activeTab === 'words') {
+        const words = text.split(/\s+/).filter(Boolean);
+        if (!words.length) {
+          alert('没有解析出任何单词：请用空格或换行分隔单词。');
+          return;
+        }
+        await customMaterials.addList({
+          id: `custom-${Date.now()}`,
+          name: picked.name || '导入词库',
+          words,
+          importedAt: Date.now()
+        });
+      } else {
+        await customMaterials.addArticle({
+          id: `custom-${Date.now()}`,
+          name: picked.name || '导入文章',
+          text,
+          importedAt: Date.now()
+        });
       }
+      await refreshMaterials(true);
     } catch (err) {
       console.error('导入失败:', err);
       alert(`导入失败：${err.message}`);
     } finally {
       importBtn.disabled = false;
-      importBtn.textContent = '导入 txt 文章';
+      syncImportUI();
     }
   });
 
+  syncImportUI();
   renderList('articles');
 
   root.dataset.ready = '1';

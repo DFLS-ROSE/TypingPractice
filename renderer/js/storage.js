@@ -30,22 +30,49 @@ export const store = {
   }
 };
 
-// 用户自己导入的练习文章，存在 userData 里（覆盖安装 / 卸载都不会丢）
+// 用户自己导入的练习素材，存在 userData 里（覆盖安装 / 卸载都不会丢）
+// 文件结构：{ articles: [...], lists: [...] }
+//   articles —— 导入的文章（整段文本）
+//   lists    —— 导入的词库（单词数组）
+// 旧版本只有 articles 一个键，读取时对 lists 做缺省兜底，老数据直接兼容
 export const customMaterials = {
-  async load() {
+  async loadAll() {
     const data = (await window.api.loadCustomMaterials()) || {};
-    return Array.isArray(data.articles) ? data.articles : [];
+    return {
+      articles: Array.isArray(data.articles) ? data.articles : [],
+      lists: Array.isArray(data.lists) ? data.lists : []
+    };
   },
-  async add(article) {
-    const list = await customMaterials.load();
-    list.push(article);
-    return customMaterials.save(list);
+  async loadArticles() {
+    return (await customMaterials.loadAll()).articles;
   },
-  async remove(id) {
-    const list = (await customMaterials.load()).filter((a) => a.id !== id);
-    return customMaterials.save(list);
+  async loadLists() {
+    return (await customMaterials.loadAll()).lists;
   },
-  save(articles) {
-    return window.api.saveCustomMaterials({ articles });
+  async addArticle(article) {
+    const data = await customMaterials.loadAll();
+    data.articles.push(article);
+    return customMaterials.save(data);
+  },
+  async removeArticle(id) {
+    const data = await customMaterials.loadAll();
+    data.articles = data.articles.filter((a) => a.id !== id);
+    return customMaterials.save(data);
+  },
+  async addList(list) {
+    const data = await customMaterials.loadAll();
+    data.lists.push(list);
+    return customMaterials.save(data);
+  },
+  async removeList(id) {
+    const data = await customMaterials.loadAll();
+    data.lists = data.lists.filter((l) => l.id !== id);
+    return customMaterials.save(data);
+  },
+  save(data) {
+    return window.api.saveCustomMaterials({
+      articles: Array.isArray(data.articles) ? data.articles : [],
+      lists: Array.isArray(data.lists) ? data.lists : []
+    });
   }
 };

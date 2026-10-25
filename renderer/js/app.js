@@ -334,7 +334,8 @@ if (new URLSearchParams(location.search).has('smoke')) {
 
     async driveCustomMaterial() {
       await window.api.saveCustomMaterials({
-        articles: [{ id: 'smoke-1', name: '冒烟导入文章', text: 'The quick brown fox jumps over the lazy dog.' }]
+        articles: [{ id: 'smoke-1', name: '冒烟导入文章', text: 'The quick brown fox jumps over the lazy dog.' }],
+        lists: [{ id: 'smoke-w1', name: '冒烟导入词库', words: ['alpha', 'beta', 'gamma'] }]
       });
       document.querySelector('.nav-item[data-view="practice"]').click();
       await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '素材视图就绪');
@@ -344,8 +345,30 @@ if (new URLSearchParams(location.search).has('smoke')) {
       const hasCustom = names.some((n) => n.indexOf('冒烟导入文章') >= 0);
       const badge = !!document.querySelector('.tag-import');
 
-      await window.api.saveCustomMaterials({ articles: [] });
-      return { hasCustom, badge, total: names.length, firstName: names[0] || '' };
+      // 切到词库 tab：导入的词库应出现在列表里（v1.0.5 修复点：此前导入只归文章）
+      document.querySelector('.tab[data-tab="words"]').click();
+      await waitFor(() => {
+        return Array.from(document.querySelectorAll('.mat-item .mat-name'))
+          .some((el) => el.textContent.indexOf('冒烟导入词库') >= 0);
+      }, 8000, '词库 tab 出现导入的词库');
+      const wordsTabHasCustom = Array.from(document.querySelectorAll('.mat-item .mat-name'))
+        .some((el) => el.textContent.indexOf('冒烟导入词库') >= 0);
+      const wordsTabBadge = !!document.querySelector('.tag-import');
+      const importBtnLabel = (document.querySelector('#import-txt') || {}).textContent || '';
+
+      // 点导入的词库 → 应进入词库练习详情（有练习数量选项），而不是文章预览
+      const customItem = Array.from(document.querySelectorAll('.mat-item'))
+        .find((el) => el.querySelector('.mat-name').textContent.indexOf('冒烟导入词库') >= 0);
+      customItem.click();
+      await waitFor(() => document.querySelector('#word-count'), 8000, '词库练习详情');
+      const detailTitle = (document.querySelector('.detail-title') || {}).textContent || '';
+
+      await window.api.saveCustomMaterials({ articles: [], lists: [] });
+      return {
+        hasCustom, badge,
+        wordsTabHasCustom, wordsTabBadge, importBtnLabel, detailTitle,
+        total: names.length, firstName: names[0] || ''
+      };
     },
 
     async driveSettings() {

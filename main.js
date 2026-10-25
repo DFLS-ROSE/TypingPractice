@@ -10,8 +10,11 @@ app.disableHardwareAcceleration();
 const SMOKE = process.argv.includes('--smoke');
 const RENDERER_DIR = path.join(__dirname, 'renderer');
 
-// 冒烟测试用独立的 userData，绝不污染真实成绩与进度
+// 冒烟测试跑在无显示 / 受限环境里：GPU 进程可能直接崩溃并把整个应用拖垮
+// （本应用是纯 DOM 界面，禁用 GPU 只影响硬件加速，不影响渲染）
 if (SMOKE) {
+  app.commandLine.appendSwitch('disable-gpu');
+  // 冒烟测试用独立的 userData，绝不污染真实成绩与进度
   app.setPath('userData', path.join(os.tmpdir(), 'typingpractice-smoke'));
 }
 
@@ -137,8 +140,8 @@ ipcMain.handle('data:appendHistory', (_e, record) => {
 });
 ipcMain.handle('data:clearHistory', () => { writeJson('history.json', []); return true; });
 
-// 用户自己导入的练习文章（存 userData，覆盖安装 / 卸载都不丢）
-ipcMain.handle('data:loadCustomMaterials', () => readJson('custom-materials.json', { articles: [] }));
+// 用户自己导入的练习素材（文章 + 词库，存 userData，覆盖安装 / 卸载都不丢）
+ipcMain.handle('data:loadCustomMaterials', () => readJson('custom-materials.json', { articles: [], lists: [] }));
 ipcMain.handle('data:saveCustomMaterials', (_e, data) => { writeJson('custom-materials.json', data); return true; });
 
 // 选择并读取一个 .txt 文本文件，返回 { name, text }

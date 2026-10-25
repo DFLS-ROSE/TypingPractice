@@ -1,11 +1,11 @@
 {
   "name": "typingpractice",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "阶段式打字学习练习软件，参考金山打字通",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "smoke": "electron . --smoke",
+    "smoke": "electron . --smoke --no-sandbox",
     "icon": "node scripts/gen-icon.mjs",
     "test": "node test/engine.test.mjs",
     "pack": "electron-builder --dir",
