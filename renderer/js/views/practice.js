@@ -24,6 +24,11 @@ export async function renderPracticeView(ctx) {
         <button class="opt active" data-src="words">主题词库</button>
         <button class="opt" data-src="sentences">例句短文</button>
         <button class="opt" data-src="freq">高频词表</button>
+        <button class="opt" data-src="ai">AI 生成</button>
+      </div>
+      <div class="online-src hidden" id="ai-kind">
+        <button class="opt active" data-kind="words">生成词库</button>
+        <button class="opt" data-kind="article">生成短文</button>
       </div>
       <div class="mat-list"><div class="muted" style="padding:16px">加载中…</div></div>
     </aside>
@@ -72,8 +77,11 @@ export async function renderPracticeView(ctx) {
   const ONLINE_PLACEHOLDER = {
     words: '主题词，如 music',
     sentences: '关键词，如 animals',
-    freq: '过滤词，可留空'
+    freq: '过滤词，可留空',
+    ai: '主题或要求，如：旅行常用词 / 一篇关于咖啡的短文'
   };
+  // AI 生成类型（v1.2.0）：词库 or 短文
+  let aiKind = 'words';
 
   // 导入的素材排在前面，带「导入」标记
   let articles = [
@@ -92,6 +100,7 @@ export async function renderPracticeView(ctx) {
     root.querySelector('#import-row').classList.toggle('hidden', online);
     root.querySelector('#online-row').classList.toggle('hidden', !online);
     root.querySelector('#online-src').classList.toggle('hidden', !online);
+    root.querySelector('#ai-kind').classList.toggle('hidden', !(online && onlineSource === 'ai'));
     if (!online) {
       const asWords = activeTab === 'words';
       importBtn.textContent = asWords ? '导入 txt 词库' : '导入 txt 文章';
@@ -243,15 +252,16 @@ export async function renderPracticeView(ctx) {
     onlineBusy = true;
     goBtn.disabled = true;
     goBtn.textContent = '搜索中…';
-    listEl.innerHTML = '<div class="muted" style="padding:16px">正在请求在线素材…（例句源较慢，约 5 秒）</div>';
+    listEl.innerHTML = '<div class="muted" style="padding:16px">正在请求在线素材…（例句源与 AI 生成较慢，可能需要十几秒）</div>';
     detailEl.innerHTML = '<div class="empty-hint">正在请求在线素材…</div>';
     try {
-      const res = await window.api.onlineSearch({ source: onlineSource, query });
+      const res = await window.api.onlineSearch({ source: onlineSource, query, kind: aiKind });
       onlineResults = res && res.ok && Array.isArray(res.items) ? res.items : [];
       if (!onlineResults.length) {
         const msg = (res && res.message) || '没有找到素材';
+        const tip = res && res.needConfig ? '<br>（设置 → AI 素材生成）' : '';
         listEl.innerHTML = `<div class="muted" style="padding:16px">${escapeHtml(msg)}</div>`;
-        detailEl.innerHTML = `<div class="empty-hint">${escapeHtml(msg)}</div>`;
+        detailEl.innerHTML = `<div class="empty-hint">${escapeHtml(msg)}${tip}</div>`;
       } else {
         renderOnlineResults();
         detailEl.innerHTML = '<div class="empty-hint">点击左侧结果预览，然后导入</div>';
@@ -387,6 +397,17 @@ export async function renderPracticeView(ctx) {
       syncTabs();
       renderOnlineResults();
       detailEl.innerHTML = '<div class="empty-hint">输入关键词后点「搜索」</div>';
+    });
+  });
+
+  root.querySelectorAll('#ai-kind .opt').forEach((b) => {
+    b.addEventListener('click', () => {
+      root.querySelectorAll('#ai-kind .opt').forEach((x) => x.classList.remove('active'));
+      b.classList.add('active');
+      aiKind = b.dataset.kind;
+      onlineResults = [];
+      renderOnlineResults();
+      detailEl.innerHTML = '<div class="empty-hint">写一句生成要求，然后点「搜索」即可生成</div>';
     });
   });
 

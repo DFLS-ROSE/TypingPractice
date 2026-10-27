@@ -6,6 +6,7 @@ module.exports = {
     'main.js',
     'preload.js',
     'online.js',
+    'ai.js',
     'renderer/**/*',
     'data/**/*',
     'build/icon.png'

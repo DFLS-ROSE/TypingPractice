@@ -211,10 +211,15 @@ async function searchFreqWords(query) {
 const SOURCES = {
   words: { label: '主题词库', needQuery: true, run: searchTopicWords },
   sentences: { label: '例句短文', needQuery: true, run: searchSentences },
-  freq: { label: '高频词表', needQuery: false, run: searchFreqWords }
+  freq: { label: '高频词表', needQuery: false, run: searchFreqWords },
+  ai: { label: 'AI 生成', needQuery: true, run: null } // 交给 ai.js 处理
 };
 
-async function searchOnline({ source, query } = {}) {
+async function searchOnline({ source, query, kind } = {}) {
+  if (source === 'ai') {
+    const { generateMaterial } = require('./ai.js');
+    return generateMaterial({ prompt: query, kind });
+  }
   const def = SOURCES[source];
   if (!def) return { ok: false, message: '未知的素材来源' };
   const q = String(query || '').trim();
@@ -229,8 +234,38 @@ async function searchOnline({ source, query } = {}) {
 }
 
 // 冒烟测试专用：不联网，返回固定结果，保证离线也能验证界面链路
-function mockSearch({ source, query } = {}) {
+function mockSearch({ source, query, kind } = {}) {
   const q = String(query || 'smoke').trim() || 'smoke';
+  if (source === 'ai') {
+    if (kind === 'article') {
+      const text = 'A quiet morning by the river helps the mind settle.\nSmall habits grow into strong skills over time.';
+      return {
+        ok: true,
+        items: [{
+          id: 'mock-ai-article',
+          title: `AI 短文 · ${q}`,
+          meta: `${text.length} 字符 · mock-model`,
+          kind: 'article',
+          name: `AI 短文 · ${q}`,
+          text,
+          preview: text
+        }]
+      };
+    }
+    const words = ['alpha', 'beta', 'gamma', 'delta'];
+    return {
+      ok: true,
+      items: [{
+        id: 'mock-ai-words',
+        title: `AI 词库 · ${q}`,
+        meta: `${words.length} 词 · mock-model`,
+        kind: 'words',
+        name: `AI 词库 · ${q}`,
+        words,
+        preview: words.join(' · ')
+      }]
+    };
+  }
   if (source === 'sentences') {
     return {
       ok: true,

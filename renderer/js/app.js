@@ -405,13 +405,50 @@ if (new URLSearchParams(location.search).has('smoke')) {
       return { importHidden, resultTitle, importLabel, wordsTabActive, hasBadge, firstItemName };
     },
 
+    async driveAiMaterial() {
+      document.querySelector('.nav-item[data-view="practice"]').click();
+      await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '素材视图就绪');
+      await waitFor(() => document.querySelector('.mat-item'), 8000, '素材列表渲染');
+
+      // 在线 tab → 选「AI 生成」→ 应出现「生成词库 / 生成短文」类型切换
+      document.querySelector('.tab[data-tab="online"]').click();
+      await waitFor(() => document.querySelector('#online-src .opt[data-src="ai"]'), 8000, '在线来源按钮');
+      document.querySelector('#online-src .opt[data-src="ai"]').click();
+      await waitFor(() => !document.querySelector('#ai-kind').classList.contains('hidden'), 8000, 'AI 类型切换出现');
+
+      // 生成短文（--smoke 下主进程走 mock，不依赖真实 API）
+      document.querySelector('#ai-kind .opt[data-kind="article"]').click();
+      document.querySelector('#online-q').value = 'river';
+      document.querySelector('#online-go').click();
+      await waitFor(() => document.querySelector('.mat-item'), 8000, 'AI 生成结果');
+      const resultTitle = (document.querySelector('.mat-item .mat-name') || {}).textContent || '';
+
+      document.querySelector('.mat-item').click();
+      await waitFor(() => document.querySelector('[data-act="import"]'), 8000, 'AI 素材预览');
+      const importLabel = (document.querySelector('[data-act="import"]') || {}).textContent || '';
+      const previewLen = (document.querySelector('.detail-preview') || { textContent: '' }).textContent.length;
+
+      document.querySelector('[data-act="import"]').click();
+      await waitFor(() => {
+        const tab = document.querySelector('.tab[data-tab="articles"]');
+        return tab && tab.classList.contains('active');
+      }, 8000, 'AI 短文导入后切到文章 tab');
+      const articlesTabActive = document.querySelector('.tab[data-tab="articles"]').classList.contains('active');
+      const hasBadge = !!document.querySelector('.tag-import');
+
+      await window.api.saveCustomMaterials({ articles: [], lists: [] });
+      return { resultTitle, importLabel, previewLen, articlesTabActive, hasBadge };
+    },
+
     async driveSettings() {
       document.querySelector('.nav-item[data-view="settings"]').click();
       await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '设置视图就绪');
       const ver = (document.querySelector('[data-s="appver"]') || {}).textContent || '';
       const hasUpdateBtn = !!document.querySelector('#check-update');
       const btnLabel = (document.querySelector('#check-update') || {}).textContent || '';
-      return { ver, hasUpdateBtn, btnLabel };
+      const hasAiConfig = !!document.querySelector('#ai-base') && !!document.querySelector('#ai-model') && !!document.querySelector('#ai-key');
+      const aiTestBtn = !!document.querySelector('#ai-test');
+      return { ver, hasUpdateBtn, btnLabel, hasAiConfig, aiTestBtn };
     }
   };
   if (window.api && window.api.smokeReady) window.api.smokeReady();

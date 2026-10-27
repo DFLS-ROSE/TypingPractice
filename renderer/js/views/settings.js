@@ -30,6 +30,29 @@ export async function renderSettingsView(ctx) {
           <button class="btn" id="check-update">检查更新</button>
           <span class="opt-hint" data-s="update-msg"></span>
         </div>
+        <div class="settings-divider">AI 素材生成（可选）</div>
+        <div class="opt-row">
+          <span class="opt-label">常用服务</span>
+          <div class="opt-group" id="ai-presets">
+            <button class="opt" data-base="https://api.deepseek.com/v1" data-model="deepseek-chat">DeepSeek</button>
+            <button class="opt" data-base="https://dashscope.aliyuncs.com/compatible-mode/v1" data-model="qwen-plus">通义千问</button>
+            <button class="opt" data-base="https://api.moonshot.cn/v1" data-model="moonshot-v1-8k">Kimi</button>
+            <button class="opt" data-base="https://open.bigmodel.cn/api/paas/v4" data-model="glm-4-flash">智谱 GLM</button>
+            <button class="opt" data-base="https://api.openai.com/v1" data-model="gpt-4o-mini">OpenAI</button>
+          </div>
+        </div>
+        <div class="ai-form">
+          <input class="search-input" id="ai-base" placeholder="API 地址（OpenAI 兼容），如 https://api.deepseek.com/v1" />
+          <input class="search-input" id="ai-model" placeholder="模型名，如 deepseek-chat" />
+          <input class="search-input" id="ai-key" type="password" placeholder="API Key（本机加密保存）" />
+        </div>
+        <div class="opt-row">
+          <span class="opt-label"></span>
+          <button class="btn" id="ai-save">保存配置</button>
+          <button class="btn" id="ai-test">测试连接</button>
+          <span class="opt-hint" data-s="ai-msg"></span>
+        </div>
+        <p class="settings-tip">填好后，在「素材练习 → 在线 → AI 生成」里输入主题即可生成词库或短文。Key 用系统凭据加密后存于本机 user-data，不上传任何服务器；仅在生成素材时随请求发给你填写的 API 地址。</p>
         <div class="opt-row">
           <span class="opt-label">成绩记录</span>
           <button class="btn danger" id="clear-history">清空全部记录</button>
@@ -160,6 +183,86 @@ export async function renderSettingsView(ctx) {
   });
 
   renderUpdate();
+
+  // ===== AI 素材生成配置 =====
+  const aiBase = root.querySelector('#ai-base');
+  const aiModel = root.querySelector('#ai-model');
+  const aiKey = root.querySelector('#ai-key');
+  const aiMsg = root.querySelector('[data-s="ai-msg"]');
+  const aiSaveBtn = root.querySelector('#ai-save');
+  const aiTestBtn = root.querySelector('#ai-test');
+
+  async function refreshAiState() {
+    try {
+      const cfg = await window.api.aiGetConfig();
+      aiKey.placeholder = cfg.hasKey
+        ? '已保存（留空表示不修改）'
+        : 'API Key（本机加密保存）';
+      return cfg;
+    } catch {
+      return { hasKey: false };
+    }
+  }
+
+  (async () => {
+    try {
+      const cfg = await window.api.aiGetConfig();
+      aiBase.value = cfg.baseUrl || '';
+      aiModel.value = cfg.model || '';
+      if (cfg.hasKey) {
+        aiKey.placeholder = '已保存（留空表示不修改）';
+        aiMsg.textContent = cfg.keyEncrypted ? 'Key 已加密保存' : 'Key 已保存（当前系统不支持加密）';
+      }
+    } catch {
+      aiMsg.textContent = '读取配置失败';
+    }
+  })();
+
+  root.querySelectorAll('#ai-presets .opt').forEach((b) => {
+    b.addEventListener('click', () => {
+      aiBase.value = b.dataset.base;
+      aiModel.value = b.dataset.model;
+      root.querySelectorAll('#ai-presets .opt').forEach((x) => x.classList.toggle('active', x === b));
+      aiMsg.textContent = '已填入预设，填好 Key 后点「保存配置」';
+    });
+  });
+
+  aiSaveBtn.addEventListener('click', async () => {
+    aiSaveBtn.disabled = true;
+    aiMsg.textContent = '保存中…';
+    try {
+      await window.api.aiSaveConfig({
+        baseUrl: aiBase.value.trim(),
+        model: aiModel.value.trim(),
+        apiKey: aiKey.value.trim()
+      });
+      aiKey.value = '';
+      const cfg = await refreshAiState();
+      if (!cfg.hasKey) aiMsg.textContent = '已保存（还没有 Key，生成时会被拒绝）';
+      else aiMsg.textContent = cfg.keyEncrypted ? '已保存，Key 已加密' : '已保存（当前系统不支持加密，明文存储）';
+    } catch (err) {
+      aiMsg.textContent = `保存失败：${err.message}`;
+    } finally {
+      aiSaveBtn.disabled = false;
+    }
+  });
+
+  aiTestBtn.addEventListener('click', async () => {
+    aiTestBtn.disabled = true;
+    aiMsg.textContent = '正在测试连接…';
+    try {
+      const res = await window.api.aiTest({
+        baseUrl: aiBase.value.trim(),
+        model: aiModel.value.trim(),
+        apiKey: aiKey.value.trim()
+      });
+      aiMsg.textContent = res && res.ok ? res.message : `失败：${(res && res.message) || '未知错误'}`;
+    } catch (err) {
+      aiMsg.textContent = `失败：${err.message}`;
+    } finally {
+      aiTestBtn.disabled = false;
+    }
+  });
 
   root.querySelector('#clear-history').addEventListener('click', async () => {
     if (!confirm('确定清空全部练习记录和课程进度吗？此操作不可恢复。')) return;

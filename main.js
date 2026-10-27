@@ -4,6 +4,7 @@ const os = require('node:os');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 const { searchOnline, mockSearch } = require('./online.js');
+const ai = require('./ai.js');
 
 // 本软件是纯 DOM 界面，禁用硬件加速，避免个别机器上 GPU 进程崩溃
 app.disableHardwareAcceleration();
@@ -165,6 +166,15 @@ ipcMain.handle('online:search', async (_e, payload) => {
   return searchOnline(payload);
 });
 
+// 大模型素材生成：配置（Key 用 safeStorage 加密落盘）与连通性测试
+// getConfig 不回传 Key 明文，只告诉渲染层「有没有」以及是否加密
+ipcMain.handle('ai:getConfig', () => {
+  const cfg = ai.loadConfig();
+  return { baseUrl: cfg.baseUrl, model: cfg.model, hasKey: !!cfg.apiKey, keyEncrypted: cfg.keyEncrypted };
+});
+ipcMain.handle('ai:saveConfig', (_e, payload) => ai.saveConfig(payload || {}));
+ipcMain.handle('ai:test', (_e, payload) => ai.testConfig(payload || {}));
+
 // 版本信息与检查更新：版本取 package.json，发行页地址在 package.json 的 releaseUrl 配置
 ipcMain.handle('app:getVersion', () => app.getVersion());
 
@@ -268,6 +278,7 @@ ipcMain.on('smoke:ready', () => {
     await runSmokeDrive('driveSessionKeepAlive');
     await runSmokeDrive('driveCustomMaterial');
     await runSmokeDrive('driveOnlineMaterial');
+    await runSmokeDrive('driveAiMaterial');
     await runSmokeDrive('driveSettings');
     setTimeout(() => app.quit(), 400);
   }, 300);
