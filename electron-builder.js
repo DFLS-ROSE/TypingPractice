@@ -5,6 +5,7 @@ module.exports = {
   files: [
     'main.js',
     'preload.js',
+    'online.js',
     'renderer/**/*',
     'data/**/*',
     'build/icon.png'

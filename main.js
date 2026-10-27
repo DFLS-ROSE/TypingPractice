@@ -3,6 +3,7 @@ const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
+const { searchOnline, mockSearch } = require('./online.js');
 
 // 本软件是纯 DOM 界面，禁用硬件加速，避免个别机器上 GPU 进程崩溃
 app.disableHardwareAcceleration();
@@ -157,6 +158,13 @@ ipcMain.handle('data:importTextFile', async () => {
   return { name: path.basename(file, path.extname(file)), text };
 });
 
+// 在线素材搜索：主进程发请求（渲染层受 CSP 限制，且要统一超时/白名单）
+// --smoke 时走内置 mock，保证冒烟测试不依赖网络
+ipcMain.handle('online:search', async (_e, payload) => {
+  if (SMOKE) return mockSearch(payload);
+  return searchOnline(payload);
+});
+
 // 版本信息与检查更新：版本取 package.json，发行页地址在 package.json 的 releaseUrl 配置
 ipcMain.handle('app:getVersion', () => app.getVersion());
 
@@ -259,6 +267,7 @@ ipcMain.on('smoke:ready', () => {
     await runSmokeDrive('driveModeSwitch');
     await runSmokeDrive('driveSessionKeepAlive');
     await runSmokeDrive('driveCustomMaterial');
+    await runSmokeDrive('driveOnlineMaterial');
     await runSmokeDrive('driveSettings');
     setTimeout(() => app.quit(), 400);
   }, 300);

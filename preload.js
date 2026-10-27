@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   loadCustomMaterials: () => ipcRenderer.invoke('data:loadCustomMaterials'),
   saveCustomMaterials: (data) => ipcRenderer.invoke('data:saveCustomMaterials', data),
   importTextFile: () => ipcRenderer.invoke('data:importTextFile'),
+  onlineSearch: (payload) => ipcRenderer.invoke('online:search', payload),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   openReleases: () => ipcRenderer.invoke('app:openReleases'),
   checkUpdate: () => ipcRenderer.invoke('app:checkUpdate'),

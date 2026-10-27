@@ -10,10 +10,20 @@ export async function renderPracticeView(ctx) {
       <div class="mat-tabs">
         <button class="tab active" data-tab="articles">文章</button>
         <button class="tab" data-tab="words">词库</button>
+        <button class="tab" data-tab="online">在线</button>
       </div>
-      <div class="list-actions">
+      <div class="list-actions" id="import-row">
         <button class="btn" id="import-txt">导入 txt 文章</button>
         <span class="list-hint">英文文本，多行也行</span>
+      </div>
+      <div class="list-actions hidden" id="online-row">
+        <input class="search-input" id="online-q" type="text" placeholder="主题词，如 music" />
+        <button class="btn" id="online-go">搜索</button>
+      </div>
+      <div class="online-src hidden" id="online-src">
+        <button class="opt active" data-src="words">主题词库</button>
+        <button class="opt" data-src="sentences">例句短文</button>
+        <button class="opt" data-src="freq">高频词表</button>
       </div>
       <div class="mat-list"><div class="muted" style="padding:16px">加载中…</div></div>
     </aside>
@@ -51,8 +61,19 @@ export async function renderPracticeView(ctx) {
   const showKeyboard = settings.showKeyboard !== false;
   const defaultMode = settings.defaultMode === 'free' ? 'free' : 'strict';
 
-  // 当前激活的 tab：决定导入的 txt 归为文章还是词库（v1.0.5 修复：此前无论哪个 tab 都归为文章）
+  // 当前激活的 tab：articles（文章）/ words（词库）/ online（在线素材）
+  // 前两个既决定列表内容，也决定导入的 txt 归为文章还是词库（v1.0.5 修复）
   let activeTab = 'articles';
+
+  // 在线素材状态（v1.1.0）
+  let onlineSource = 'words';
+  let onlineResults = [];
+  let onlineBusy = false;
+  const ONLINE_PLACEHOLDER = {
+    words: '主题词，如 music',
+    sentences: '关键词，如 animals',
+    freq: '过滤词，可留空'
+  };
 
   // 导入的素材排在前面，带「导入」标记
   let articles = [
@@ -64,17 +85,28 @@ export async function renderPracticeView(ctx) {
     ...wordsData.lists
   ];
 
-  // 按钮文案 / 提示随 tab 切换，让用户知道当前导入会变成什么
-  function syncImportUI() {
+  // 三个 tab 的可见区块与文案切换
+  function syncTabs() {
     root.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === activeTab));
-    const asWords = activeTab === 'words';
-    importBtn.textContent = asWords ? '导入 txt 词库' : '导入 txt 文章';
-    root.querySelector('.list-hint').textContent = asWords
-      ? '英文单词，空格或换行分隔'
-      : '英文文本，多行也行';
+    const online = activeTab === 'online';
+    root.querySelector('#import-row').classList.toggle('hidden', online);
+    root.querySelector('#online-row').classList.toggle('hidden', !online);
+    root.querySelector('#online-src').classList.toggle('hidden', !online);
+    if (!online) {
+      const asWords = activeTab === 'words';
+      importBtn.textContent = asWords ? '导入 txt 词库' : '导入 txt 文章';
+      root.querySelector('.list-hint').textContent = asWords
+        ? '英文单词，空格或换行分隔'
+        : '英文文本，多行也行';
+    }
+    root.querySelector('#online-q').placeholder = ONLINE_PLACEHOLDER[onlineSource] || '关键词';
   }
 
   function renderList(kind) {
+    if (kind === 'online') {
+      renderOnlineResults();
+      return;
+    }
     listEl.innerHTML = '';
     const items = kind === 'articles' ? articles : lists;
     for (const entry of items) {
@@ -131,6 +163,108 @@ export async function renderPracticeView(ctx) {
         first.click();
         first.scrollIntoView({ block: 'nearest' });
       }
+    }
+  }
+
+  // ===== 在线素材（v1.1.0）：搜索 → 预览 → 一键导入 =====
+  function renderOnlineResults() {
+    listEl.innerHTML = '';
+    if (!onlineResults.length) {
+      const hint = document.createElement('div');
+      hint.className = 'muted';
+      hint.style.padding = '16px';
+      hint.textContent = '输入关键词后点「搜索」，从在线源取素材';
+      listEl.appendChild(hint);
+      return;
+    }
+    for (const item of onlineResults) {
+      const el = document.createElement('button');
+      el.className = 'mat-item';
+      el.innerHTML = `<span class="mat-name">${escapeHtml(item.title)}</span><span class="mat-len">${escapeHtml(item.meta)}</span>`;
+      el.addEventListener('click', () => {
+        listEl.querySelectorAll('.mat-item').forEach((b) => b.classList.remove('active'));
+        el.classList.add('active');
+        showOnlineItem(item);
+      });
+      listEl.appendChild(el);
+    }
+  }
+
+  function showOnlineItem(item) {
+    const asWords = item.kind === 'words';
+    const body = asWords ? item.words.join(' ') : item.text;
+    const preview = body.length > 4000
+      ? `${body.slice(0, 4000)} …（预览截断，导入后保留完整内容）`
+      : body;
+    detailEl.innerHTML = `
+      <div class="detail-crumb">在线素材 · ${asWords ? '词库' : '文章'} · ${escapeHtml(item.meta)}</div>
+      <h2 class="detail-title">${escapeHtml(item.title)}</h2>
+      <div class="detail-preview mono">${escapeHtml(preview)}</div>
+      <div class="detail-actions">
+        <button class="btn primary" data-act="import">导入为${asWords ? '词库' : '文章'}</button>
+      </div>
+    `;
+    detailEl.querySelector('[data-act="import"]').addEventListener('click', () => importOnlineItem(item));
+  }
+
+  async function importOnlineItem(item) {
+    const asWords = item.kind === 'words';
+    const id = `online-${Date.now()}`;
+    try {
+      if (asWords) {
+        await customMaterials.addList({
+          id,
+          name: item.name || item.title,
+          words: item.words,
+          importedAt: Date.now()
+        });
+        activeTab = 'words';
+      } else {
+        await customMaterials.addArticle({
+          id,
+          name: item.name || item.title,
+          text: item.text,
+          importedAt: Date.now()
+        });
+        activeTab = 'articles';
+      }
+      syncTabs();
+      await refreshMaterials(true);
+    } catch (err) {
+      console.error('在线素材导入失败:', err);
+      alert(`导入失败：${err.message}`);
+    }
+  }
+
+  async function runOnlineSearch() {
+    if (onlineBusy) return;
+    const goBtn = root.querySelector('#online-go');
+    const query = root.querySelector('#online-q').value.trim();
+    onlineBusy = true;
+    goBtn.disabled = true;
+    goBtn.textContent = '搜索中…';
+    listEl.innerHTML = '<div class="muted" style="padding:16px">正在请求在线素材…（例句源较慢，约 5 秒）</div>';
+    detailEl.innerHTML = '<div class="empty-hint">正在请求在线素材…</div>';
+    try {
+      const res = await window.api.onlineSearch({ source: onlineSource, query });
+      onlineResults = res && res.ok && Array.isArray(res.items) ? res.items : [];
+      if (!onlineResults.length) {
+        const msg = (res && res.message) || '没有找到素材';
+        listEl.innerHTML = `<div class="muted" style="padding:16px">${escapeHtml(msg)}</div>`;
+        detailEl.innerHTML = `<div class="empty-hint">${escapeHtml(msg)}</div>`;
+      } else {
+        renderOnlineResults();
+        detailEl.innerHTML = '<div class="empty-hint">点击左侧结果预览，然后导入</div>';
+      }
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      onlineResults = [];
+      listEl.innerHTML = `<div class="error-panel">搜索失败：${escapeHtml(msg)}</div>`;
+      detailEl.innerHTML = '<div class="empty-hint">搜索失败，检查网络后重试</div>';
+    } finally {
+      onlineBusy = false;
+      goBtn.disabled = false;
+      goBtn.textContent = '搜索';
     }
   }
 
@@ -223,8 +357,36 @@ export async function renderPracticeView(ctx) {
   root.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       activeTab = tab.dataset.tab;
-      syncImportUI();
+      syncTabs();
       renderList(activeTab);
+      if (activeTab === 'online') {
+        detailEl.innerHTML = onlineResults.length
+          ? '<div class="empty-hint">点击左侧结果预览，然后导入</div>'
+          : '<div class="empty-hint">输入关键词后点「搜索」</div>';
+      } else {
+        detailEl.innerHTML = '<div class="empty-hint">选择左侧素材开始练习</div>';
+      }
+    });
+  });
+
+  // 在线搜索控件
+  const onlineInput = root.querySelector('#online-q');
+  root.querySelector('#online-go').addEventListener('click', runOnlineSearch);
+  onlineInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runOnlineSearch();
+    }
+  });
+  root.querySelectorAll('#online-src .opt').forEach((b) => {
+    b.addEventListener('click', () => {
+      root.querySelectorAll('#online-src .opt').forEach((x) => x.classList.remove('active'));
+      b.classList.add('active');
+      onlineSource = b.dataset.src;
+      onlineResults = [];
+      syncTabs();
+      renderOnlineResults();
+      detailEl.innerHTML = '<div class="empty-hint">输入关键词后点「搜索」</div>';
     });
   });
 
@@ -267,11 +429,11 @@ export async function renderPracticeView(ctx) {
       alert(`导入失败：${err.message}`);
     } finally {
       importBtn.disabled = false;
-      syncImportUI();
+      syncTabs();
     }
   });
 
-  syncImportUI();
+  syncTabs();
   renderList('articles');
 
   root.dataset.ready = '1';

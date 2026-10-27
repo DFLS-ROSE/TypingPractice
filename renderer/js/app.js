@@ -371,6 +371,40 @@ if (new URLSearchParams(location.search).has('smoke')) {
       };
     },
 
+    async driveOnlineMaterial() {
+      document.querySelector('.nav-item[data-view="practice"]').click();
+      await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '素材视图就绪');
+      await waitFor(() => document.querySelector('.mat-item'), 8000, '素材列表渲染');
+
+      // 切到「在线」tab：搜索框出现、txt 导入行隐藏
+      document.querySelector('.tab[data-tab="online"]').click();
+      await waitFor(() => document.querySelector('#online-q'), 8000, '在线搜索框');
+      const importHidden = document.querySelector('#import-row').classList.contains('hidden');
+
+      // 搜索：--smoke 模式下主进程走内置 mock，不依赖网络
+      document.querySelector('#online-q').value = 'smoke';
+      document.querySelector('#online-go').click();
+      await waitFor(() => document.querySelector('.mat-item'), 8000, '在线搜索结果');
+      const resultTitle = (document.querySelector('.mat-item .mat-name') || {}).textContent || '';
+
+      // 点结果 → 右侧预览 → 导入为词库
+      document.querySelector('.mat-item').click();
+      await waitFor(() => document.querySelector('[data-act="import"]'), 8000, '在线素材预览');
+      const importLabel = (document.querySelector('[data-act="import"]') || {}).textContent || '';
+      document.querySelector('[data-act="import"]').click();
+
+      await waitFor(() => {
+        const tab = document.querySelector('.tab[data-tab="words"]');
+        return tab && tab.classList.contains('active');
+      }, 8000, '导入后切到词库 tab');
+      const wordsTabActive = document.querySelector('.tab[data-tab="words"]').classList.contains('active');
+      const hasBadge = !!document.querySelector('.tag-import');
+      const firstItemName = (document.querySelector('.mat-item .mat-name') || {}).textContent || '';
+
+      await window.api.saveCustomMaterials({ articles: [], lists: [] });
+      return { importHidden, resultTitle, importLabel, wordsTabActive, hasBadge, firstItemName };
+    },
+
     async driveSettings() {
       document.querySelector('.nav-item[data-view="settings"]').click();
       await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '设置视图就绪');
