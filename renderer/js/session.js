@@ -308,6 +308,8 @@ export async function createSession(opts) {
     cleanup,
     pause,
     resume,
-    isFinished: () => finished
+    isFinished: () => finished,
+    // 侧栏「进行中的练习」用来显示进度
+    progress: () => ({ done: engine.pos, total: engine.text.length })
   };
 }

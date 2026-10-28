@@ -276,6 +276,7 @@ ipcMain.on('smoke:ready', () => {
     await runSmokeDrive('driveTestOptions');
     await runSmokeDrive('driveModeSwitch');
     await runSmokeDrive('driveSessionKeepAlive');
+    await runSmokeDrive('driveMultiSession');
     await runSmokeDrive('driveCustomMaterial');
     await runSmokeDrive('driveOnlineMaterial');
     await runSmokeDrive('driveAiMaterial');

@@ -11,8 +11,11 @@ import { escapeHtml } from './utils.js';
 const content = document.getElementById('content');
 let currentCleanup = null;
 let currentView = { view: 'tutorial', params: {} };
-// 进行中的练习：切到别的页面时暂停保留，不销毁
-let activeSession = null;
+// 进行中的练习（v1.2.1）：可以同时挂起多个，切到别的页面只暂停、不销毁
+let sessions = [];
+let activeId = null;
+let sessionSeq = 0;
+const MAX_SESSIONS = 6;
 
 function setActiveNav(view) {
   document.querySelectorAll('.nav-item').forEach((b) => {
@@ -20,31 +23,116 @@ function setActiveNav(view) {
   });
 }
 
-function updateSessionNav() {
-  const btn = document.getElementById('nav-session');
-  if (!btn) return;
-  const alive = !!activeSession && !activeSession.isFinished();
-  btn.classList.toggle('hidden', !alive);
-  if (alive) btn.textContent = `继续练习 · ${activeSession.title}`;
+function liveSessions() {
+  return sessions.filter((s) => s.session && !s.session.isFinished());
 }
 
-function pauseActiveSession() {
-  if (!activeSession) return;
-  if (activeSession.isFinished()) {
-    activeSession.cleanup();
-    activeSession = null;
+// 侧栏「进行中的练习」列表：标题 + 进度，可单条放弃
+function renderSessionList() {
+  const box = document.getElementById('session-list');
+  if (!box) return;
+
+  // 已完成且不在前台显示的会话直接回收，避免越堆越多
+  sessions = sessions.filter((s) => {
+    if (s.id === activeId) return true;
+    if (s.session.isFinished()) {
+      s.session.cleanup();
+      return false;
+    }
+    return true;
+  });
+
+  const alive = liveSessions();
+  box.classList.toggle('hidden', !alive.length);
+  box.innerHTML = '';
+  if (!alive.length) return;
+
+  const head = document.createElement('div');
+  head.className = 'session-list-title';
+  head.textContent = alive.length > 1 ? `进行中的练习（${alive.length}）` : '进行中的练习';
+  box.appendChild(head);
+
+  for (const item of alive) {
+    const row = document.createElement('div');
+    row.className = `session-item${item.id === activeId ? ' active' : ''}`;
+    row.dataset.id = item.id;
+
+    const p = item.session.progress ? item.session.progress() : { done: 0, total: 0 };
+    const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
+
+    const main = document.createElement('button');
+    main.className = 'session-main';
+    main.dataset.act = 'resume';
+    main.innerHTML = `<span class="session-name">${escapeHtml(item.title)}</span><span class="session-pct">${pct}%</span>`;
+    main.addEventListener('click', (e) => {
+      e.currentTarget.blur();
+      resumeSession(item.id);
+    });
+
+    const drop = document.createElement('button');
+    drop.className = 'session-close';
+    drop.dataset.act = 'drop';
+    drop.title = '放弃这个练习';
+    drop.textContent = '×';
+    drop.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropSession(item.id);
+    });
+
+    row.appendChild(main);
+    row.appendChild(drop);
+    box.appendChild(row);
+  }
+}
+
+// 切走时暂停当前会话（保留在列表里）
+function pauseCurrent() {
+  if (!activeId) return;
+  const cur = sessions.find((s) => s.id === activeId);
+  activeId = null;
+  if (!cur) return;
+  if (cur.session.isFinished()) {
+    cur.session.cleanup();
+    sessions = sessions.filter((s) => s !== cur);
     return;
   }
-  activeSession.pause();
-  if (activeSession.root.parentNode) activeSession.root.remove();
+  cur.session.pause();
+  if (cur.session.root.parentNode) cur.session.root.remove();
 }
 
-function resumeActiveSession() {
-  if (!activeSession || activeSession.isFinished()) return;
+function resumeSession(id) {
+  const item = sessions.find((s) => s.id === id);
+  if (!item || item.session.isFinished()) return;
+  if (activeId && activeId !== id) pauseCurrent();
+  // 离开当前视图前先执行它的 cleanup（例如设置页的更新状态订阅）
+  if (currentCleanup) {
+    try { currentCleanup(); } catch (err) { console.error(err); }
+    currentCleanup = null;
+  }
   content.innerHTML = '';
-  content.appendChild(activeSession.root);
-  activeSession.resume();
+  content.appendChild(item.session.root);
+  item.session.resume();
+  activeId = id;
   setActiveNav('session');
+  renderSessionList();
+}
+
+function dropSession(id) {
+  const item = sessions.find((s) => s.id === id);
+  if (!item) return;
+  const wasActive = activeId === id;
+  if (!item.session.isFinished()) {
+    if (!confirm(`放弃「${item.title}」这次练习？进度不会保存。`)) return;
+  }
+  item.session.cleanup();
+  sessions = sessions.filter((s) => s !== item);
+  if (wasActive) {
+    activeId = null;
+    renderSessionList();
+    navigate(item.back.view, item.back.params);
+    return;
+  }
+  renderSessionList();
 }
 
 async function renderView(view, params) {
@@ -59,16 +147,27 @@ async function renderView(view, params) {
   }
 }
 
+// 测试辅助：清空所有进行中的会话（冒烟驱动之间需要干净起点，避免互相干扰）
+function clearAllSessions() {
+  for (const item of sessions) {
+    try { item.session.cleanup(); } catch (err) { console.error(err); }
+  }
+  sessions = [];
+  activeId = null;
+  currentCleanup = null;
+  renderSessionList();
+}
+
 export function navigate(view, params = {}) {
   if (currentCleanup) {
     try { currentCleanup(); } catch (err) { console.error(err); }
     currentCleanup = null;
   }
-  pauseActiveSession();
+  pauseCurrent();
   currentView = { view, params };
   setActiveNav(view);
   content.innerHTML = '';
-  updateSessionNav();
+  renderSessionList();
   renderView(view, params)
     .then((res) => {
       currentCleanup = res && res.cleanup ? res.cleanup : null;
@@ -85,11 +184,14 @@ export async function startSession(opts) {
     try { currentCleanup(); } catch (err) { console.error(err); }
     currentCleanup = null;
   }
-  // 新练习开始 → 之前暂停中的练习作废
-  if (activeSession) {
-    activeSession.cleanup();
-    activeSession = null;
+  // 已有练习只暂停保留（v1.2.1），不再作废
+  pauseCurrent();
+
+  if (liveSessions().length >= MAX_SESSIONS) {
+    alert(`最多同时保留 ${MAX_SESSIONS} 个进行中的练习，先从侧栏关掉一个再开始。`);
+    return;
   }
+
   setActiveNav('');
   content.innerHTML = '<div class="loading-hint">正在准备练习…</div>';
 
@@ -98,16 +200,19 @@ export async function startSession(opts) {
     session = await createSession({
       ...opts,
       onExit: () => {
-        // 主动退出 = 放弃本次练习
-        if (activeSession) {
-          activeSession.cleanup();
-          activeSession = null;
+        // 主动退出 = 放弃这一次练习（其它会话不受影响）
+        const cur = sessions.find((s) => s.id === activeId);
+        if (cur) {
+          cur.session.cleanup();
+          sessions = sessions.filter((s) => s !== cur);
         }
+        activeId = null;
+        renderSessionList();
         navigate(back.view, back.params);
       },
       onFinish: async (stats) => {
         await recordResult(opts, stats);
-        updateSessionNav();
+        renderSessionList();
         if (opts.afterFinish) await opts.afterFinish(stats);
       }
     });
@@ -120,15 +225,17 @@ export async function startSession(opts) {
   content.innerHTML = '';
   content.appendChild(session.root);
   currentCleanup = session.cleanup;
-  activeSession = {
-    root: session.root,
-    cleanup: session.cleanup,
-    pause: session.pause,
-    resume: session.resume,
-    isFinished: session.isFinished,
-    title: opts.title || '练习'
+
+  sessionSeq += 1;
+  const item = {
+    id: `s-${sessionSeq}`,
+    title: opts.title || '练习',
+    session,
+    back
   };
-  updateSessionNav();
+  sessions.push(item);
+  activeId = item.id;
+  renderSessionList();
 }
 
 // 成绩保存串行化：连续「下一节」时两次 read-modify-write 不会互相覆盖
@@ -172,8 +279,7 @@ async function persistResult(opts, stats) {
 
 document.querySelectorAll('.nav-item').forEach((btn) => {
   btn.addEventListener('click', () => {
-    if (btn.dataset.view === 'session') resumeActiveSession();
-    else navigate(btn.dataset.view);
+    navigate(btn.dataset.view);
   });
 });
 
@@ -213,6 +319,7 @@ if (new URLSearchParams(location.search).has('smoke')) {
   // 冒烟驱动：① 教程「下一节」链路 ② 速度测试选项可选 ③ 严格/自由即时切换 ④ 切页后练习保留
   window.__smoke = {
     async driveNextSection() {
+      clearAllSessions();
       await waitFor(() => document.querySelector('.tree-item'));
       document.querySelector('.tree-item').click();
       await waitFor(() => document.querySelector('[data-act="start"]'));
@@ -247,6 +354,7 @@ if (new URLSearchParams(location.search).has('smoke')) {
     },
 
     async driveTestOptions() {
+      clearAllSessions();
       document.querySelector('.nav-item[data-view="test"]').click();
       await waitFor(() => document.querySelector('#test-dur'), 8000, '速度测试视图挂载');
       await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '速度测试视图就绪（事件已绑定）');
@@ -276,6 +384,7 @@ if (new URLSearchParams(location.search).has('smoke')) {
     },
 
     async driveModeSwitch() {
+      clearAllSessions();
       await startFirstLesson();
 
       const first = document.querySelector('.typing-text .ch').textContent;
@@ -310,6 +419,7 @@ if (new URLSearchParams(location.search).has('smoke')) {
     },
 
     async driveSessionKeepAlive() {
+      clearAllSessions();
       await startFirstLesson();
 
       for (const ch of typeChars(5)) press(ch);
@@ -318,18 +428,64 @@ if (new URLSearchParams(location.search).has('smoke')) {
       // 切到成绩统计：练习应暂停保留，而不是被销毁
       document.querySelector('.nav-item[data-view="stats"]').click();
       await waitFor(() => {
-        const b = document.getElementById('nav-session');
-        return b && !b.classList.contains('hidden');
-      }, 8000, '继续练习入口出现');
+        const row = document.querySelector('#session-list .session-main');
+        return row && !document.getElementById('session-list').classList.contains('hidden');
+      }, 8000, '进行中练习入口出现');
       const sessionHidden = !document.querySelector('.session');
-      const navLabel = document.getElementById('nav-session').textContent;
+      const navLabel = (document.querySelector('#session-list .session-name') || {}).textContent || '';
 
-      // 点「继续练习」回来：进度应原样保留
-      document.getElementById('nav-session').click();
+      // 点回那一条：进度应原样保留
+      document.querySelector('#session-list .session-main').click();
       await waitFor(() => document.querySelector('.session'), 8000, '会话恢复');
       const doneAfter = document.querySelectorAll('.typing-text .ch.done').length;
 
       return { doneBefore, doneAfter, sessionHidden, navLabel };
+    },
+
+    async driveMultiSession() {
+      clearAllSessions();
+      // 第一个练习：教程第一节
+      await startFirstLesson();
+      for (const ch of typeChars(3)) press(ch);
+      const firstTitle = (document.querySelector('.session-title') || {}).textContent || '';
+      const doneFirst = document.querySelectorAll('.typing-text .ch.done').length;
+
+      // 切走 → 另开一个速度测试
+      document.querySelector('.nav-item[data-view="test"]').click();
+      await waitFor(() => document.querySelector('#test-dur'), 8000, '速度测试视图');
+      await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '速度测试就绪');
+      document.querySelector('[data-act="start"]').click();
+      await waitFor(() => document.querySelector('.session .typing-text .ch'), 8000, '第二个练习启动');
+      for (const ch of typeChars(2)) press(ch);
+      const secondTitle = (document.querySelector('.session-title') || {}).textContent || '';
+
+      // 再切走：两个练习都应留在侧栏
+      document.querySelector('.nav-item[data-view="stats"]').click();
+      await waitFor(() => document.querySelectorAll('#session-list .session-item').length >= 2, 8000, '两个会话同时保留');
+      const count = document.querySelectorAll('#session-list .session-item').length;
+      const titles = Array.from(document.querySelectorAll('#session-list .session-name')).map((el) => el.textContent);
+
+      // 切回第一个：标题与进度应保持不变
+      const target = Array.from(document.querySelectorAll('#session-list .session-item'))
+        .find((row) => (row.querySelector('.session-name') || {}).textContent === firstTitle);
+      target.querySelector('.session-main').click();
+      await waitFor(() => document.querySelector('.session-title'), 8000, '切回第一个练习');
+      const restoredTitle = (document.querySelector('.session-title') || {}).textContent || '';
+      const restoredDone = document.querySelectorAll('.typing-text .ch.done').length;
+
+      // 收尾：Esc 放弃当前，再放弃剩下的一个
+      press('Escape');
+      await waitFor(() => !document.querySelector('.session'), 8000, '退出当前练习');
+      const rest = document.querySelector('#session-list .session-main');
+      if (rest) {
+        rest.click();
+        await waitFor(() => document.querySelector('.session'), 8000, '恢复剩余练习');
+        press('Escape');
+        await waitFor(() => !document.querySelector('.session'), 8000, '退出剩余练习');
+      }
+      const remain = document.querySelectorAll('#session-list .session-item').length;
+
+      return { count, titles, firstTitle, secondTitle, restoredTitle, doneFirst, restoredDone, remain };
     },
 
     async driveCustomMaterial() {
