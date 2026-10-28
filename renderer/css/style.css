@@ -132,6 +132,24 @@ button { font-family: inherit; color: inherit; }
 .btn.danger:hover { background: var(--red-soft); }
 .btn.big { padding: 11px 34px; font-size: 14.5px; }
 
+/* 内联确认气泡（替代 window.confirm） */
+.popconfirm {
+  position: fixed;
+  z-index: 1000;
+  min-width: 190px;
+  max-width: 260px;
+  padding: 11px 12px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(20, 30, 45, 0.16);
+  font-size: 12.5px;
+  color: var(--text);
+}
+.popconfirm-msg { line-height: 1.55; margin-bottom: 9px; word-break: break-word; }
+.popconfirm-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.popconfirm .pop-btn { padding: 4px 11px; font-size: 12px; border-radius: 6px; }
+
 .tree { padding: 4px 10px 14px; }
 .tree-stage { margin-bottom: 4px; }
 .tree-stage-head { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 6px 2px; }

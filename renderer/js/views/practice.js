@@ -1,5 +1,5 @@
 import { loadJson, customMaterials } from '../storage.js';
-import { escapeHtml, shuffle } from '../utils.js';
+import { escapeHtml, shuffle, popConfirm } from '../utils.js';
 
 export async function renderPracticeView(ctx) {
   const root = document.createElement('div');
@@ -138,14 +138,15 @@ export async function renderPracticeView(ctx) {
         del.addEventListener('click', (e) => {
           e.stopPropagation();
           const label = kind === 'articles' ? '文章' : '词库';
-          if (!confirm(`删除导入的${label}「${entry.name}」？`)) return;
-          const done = kind === 'articles'
-            ? customMaterials.removeArticle(entry.id)
-            : customMaterials.removeList(entry.id);
-          done.then(async () => {
-            await refreshMaterials();
-            detailEl.innerHTML = `<div class="empty-hint">选择左侧素材开始练习</div>`;
-          });
+          popConfirm(del, `删除导入的${label}「${entry.name}」？`, () => {
+            const done = kind === 'articles'
+              ? customMaterials.removeArticle(entry.id)
+              : customMaterials.removeList(entry.id);
+            done.then(async () => {
+              await refreshMaterials();
+              detailEl.innerHTML = `<div class="empty-hint">选择左侧素材开始练习</div>`;
+            });
+          }, { confirmText: '删除' });
         });
         item.appendChild(del);
       }

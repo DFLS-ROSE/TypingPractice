@@ -1,4 +1,5 @@
 import { store } from '../storage.js';
+import { popConfirm } from '../utils.js';
 
 export async function renderSettingsView(ctx) {
   const root = document.createElement('div');
@@ -56,6 +57,7 @@ export async function renderSettingsView(ctx) {
         <div class="opt-row">
           <span class="opt-label">成绩记录</span>
           <button class="btn danger" id="clear-history">清空全部记录</button>
+          <span class="opt-hint" data-s="clear-msg"></span>
         </div>
         <p class="settings-tip">设置与成绩保存在本机用户目录（AppData/Roaming/TypingPractice/user-data），换电脑不会同步。</p>
       </div>
@@ -264,13 +266,17 @@ export async function renderSettingsView(ctx) {
     }
   });
 
-  root.querySelector('#clear-history').addEventListener('click', async () => {
-    if (!confirm('确定清空全部练习记录和课程进度吗？此操作不可恢复。')) return;
-    await store.clearHistory();
-    const p = await store.progress();
-    p.sections = {};
-    await store.saveProgress(p);
-    alert('已清空');
+  const clearBtn = root.querySelector('#clear-history');
+  const clearMsg = root.querySelector('[data-s="clear-msg"]');
+  clearBtn.addEventListener('click', () => {
+    popConfirm(clearBtn, '确定清空全部练习记录和课程进度吗？此操作不可恢复。', async () => {
+      await store.clearHistory();
+      const p = await store.progress();
+      p.sections = {};
+      await store.saveProgress(p);
+      clearMsg.textContent = '已清空';
+      setTimeout(() => { clearMsg.textContent = ''; }, 2500);
+    }, { confirmText: '清空' });
   });
 
   root.dataset.ready = '1';

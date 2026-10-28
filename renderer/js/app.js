@@ -6,7 +6,7 @@ import { renderPracticeView } from './views/practice.js';
 import { renderTestView } from './views/test.js';
 import { renderStatsView } from './views/stats.js';
 import { renderSettingsView } from './views/settings.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, popConfirm, closePopConfirm } from './utils.js';
 
 const content = document.getElementById('content');
 let currentCleanup = null;
@@ -31,6 +31,8 @@ function liveSessions() {
 function renderSessionList() {
   const box = document.getElementById('session-list');
   if (!box) return;
+  // 列表重建后旧按钮就没了，浮在上面的确认气泡要一并收起
+  closePopConfirm();
 
   // 已完成且不在前台显示的会话直接回收，避免越堆越多
   sessions = sessions.filter((s) => {
@@ -76,7 +78,7 @@ function renderSessionList() {
     drop.textContent = '×';
     drop.addEventListener('click', (e) => {
       e.stopPropagation();
-      dropSession(item.id);
+      dropSession(item.id, drop);
     });
 
     row.appendChild(main);
@@ -117,22 +119,27 @@ function resumeSession(id) {
   renderSessionList();
 }
 
-function dropSession(id) {
+function dropSession(id, anchor) {
   const item = sessions.find((s) => s.id === id);
   if (!item) return;
   const wasActive = activeId === id;
-  if (!item.session.isFinished()) {
-    if (!confirm(`放弃「${item.title}」这次练习？进度不会保存。`)) return;
-  }
-  item.session.cleanup();
-  sessions = sessions.filter((s) => s !== item);
-  if (wasActive) {
+  const doDrop = () => {
+    item.session.cleanup();
+    sessions = sessions.filter((s) => s !== item);
+    if (!wasActive) {
+      renderSessionList();
+      return;
+    }
     activeId = null;
     renderSessionList();
     navigate(item.back.view, item.back.params);
+  };
+  if (item.session.isFinished()) {
+    doDrop();
     return;
   }
-  renderSessionList();
+  // 用内联气泡确认，避免 window.confirm 弹系统对话框
+  popConfirm(anchor, `放弃「${item.title}」这次练习？进度不会保存。`, doDrop, { confirmText: '放弃' });
 }
 
 async function renderView(view, params) {
@@ -473,19 +480,21 @@ if (new URLSearchParams(location.search).has('smoke')) {
       const restoredTitle = (document.querySelector('.session-title') || {}).textContent || '';
       const restoredDone = document.querySelectorAll('.typing-text .ch.done').length;
 
-      // 收尾：Esc 放弃当前，再放弃剩下的一个
+      // 收尾：Esc 放弃当前，剩下的用 × + 内联确认放弃（顺带验证 popconfirm）
       press('Escape');
       await waitFor(() => !document.querySelector('.session'), 8000, '退出当前练习');
-      const rest = document.querySelector('#session-list .session-main');
-      if (rest) {
-        rest.click();
-        await waitFor(() => document.querySelector('.session'), 8000, '恢复剩余练习');
-        press('Escape');
-        await waitFor(() => !document.querySelector('.session'), 8000, '退出剩余练习');
+      let popVisible = false;
+      const restDrop = document.querySelector('#session-list .session-close');
+      if (restDrop) {
+        restDrop.click();
+        await waitFor(() => document.querySelector('.popconfirm'), 3000, '内联确认气泡出现');
+        popVisible = !!document.querySelector('.popconfirm');
+        document.querySelector('.popconfirm [data-act="ok"]').click();
+        await waitFor(() => document.querySelectorAll('#session-list .session-item').length === 0, 8000, '放弃后队列清空');
       }
       const remain = document.querySelectorAll('#session-list .session-item').length;
 
-      return { count, titles, firstTitle, secondTitle, restoredTitle, doneFirst, restoredDone, remain };
+      return { count, titles, firstTitle, secondTitle, restoredTitle, doneFirst, restoredDone, remain, popVisible };
     },
 
     async driveCustomMaterial() {
