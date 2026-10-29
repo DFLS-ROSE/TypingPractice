@@ -43,18 +43,22 @@ export async function renderTestView(ctx) {
   let articlesData;
   let wordsData;
   let progress;
+  let curriculum;
   try {
-    [layout, articlesData, wordsData, progress] = await Promise.all([
+    [layout, articlesData, wordsData, progress, curriculum] = await Promise.all([
       loadJson('layout.json'),
       loadJson('materials/articles.json'),
       loadJson('materials/words.json'),
-      ctx.store.progress()
+      ctx.store.progress(),
+      loadJson('curriculum.json')
     ]);
   } catch (err) {
     console.error('素材加载失败:', err);
     root.innerHTML = `<div class="panel error-panel">素材加载失败：${escapeHtml(err.message)}</div>`;
     return { cleanup() {} };
   }
+
+  const thresholds = (curriculum && curriculum.starThresholds) || {};
 
   const settings = progress.settings || {};
   const showKeyboard = settings.showKeyboard !== false;
@@ -110,6 +114,8 @@ export async function renderTestView(ctx) {
       showKeyboard,
       layout,
       durationMs,
+      starTwo: thresholds.two,
+      starThree: thresholds.three,
       source: 'test'
     });
   });

@@ -213,7 +213,8 @@ export async function createSession(opts) {
     }
     const s = engine.stats();
     paint();
-    const stars = timedOut ? 0 : evalStars(s, starTwo, starThree);
+    // 限时测试（速度测试）时间到不回 0 星，按已打内容评；其它场景必须打完
+    const stars = evalStars(s, starTwo, starThree, { requireFinished: !durationMs });
     const resultEl = root.querySelector('.session-result');
     resultEl.classList.remove('hidden');
     resultEl.querySelector('.result-title').textContent = timedOut ? '时间到' : '练习完成';

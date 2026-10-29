@@ -132,8 +132,12 @@ export class TypingEngine {
   }
 }
 
-export function evalStars(stats, two, three) {
-  if (!stats.finished) return 0;
+export function evalStars(stats, two, three, opts = {}) {
+  // requireFinished = false 用于限时测试：时间到时文本通常打不完，
+  // 按已打内容评星，而不是一律 0 星
+  const requireFinished = opts.requireFinished !== false;
+  if (requireFinished && !stats.finished) return 0;
+  if (!requireFinished && stats.typed === 0) return 0;
   if (three && stats.wpm >= three.wpm && stats.accuracy >= three.accuracy) return 3;
   if (two && stats.wpm >= two.wpm && stats.accuracy >= two.accuracy) return 2;
   return 1;

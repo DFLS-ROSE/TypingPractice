@@ -47,14 +47,16 @@ export async function renderPracticeView(ctx) {
   let progress;
   let custom;      // 导入的文章
   let customLists; // 导入的词库
+  let curriculum;
   try {
-    [layout, articlesData, wordsData, progress, custom, customLists] = await Promise.all([
+    [layout, articlesData, wordsData, progress, custom, customLists, curriculum] = await Promise.all([
       loadJson('layout.json'),
       loadJson('materials/articles.json'),
       loadJson('materials/words.json'),
       ctx.store.progress(),
       customMaterials.loadArticles(),
-      customMaterials.loadLists()
+      customMaterials.loadLists(),
+      loadJson('curriculum.json')
     ]);
   } catch (err) {
     console.error('素材加载失败:', err);
@@ -65,6 +67,8 @@ export async function renderPracticeView(ctx) {
   const settings = progress.settings || {};
   const showKeyboard = settings.showKeyboard !== false;
   const defaultMode = settings.defaultMode === 'free' ? 'free' : 'strict';
+  // 素材练习也按同一套星级门槛评（不算进课程星级，只作结果反馈）
+  const thresholds = (curriculum && curriculum.starThresholds) || {};
 
   // 当前激活的 tab：articles（文章）/ words（词库）/ online（在线素材）
   // 前两个既决定列表内容，也决定导入的 txt 归为文章还是词库（v1.0.5 修复）
@@ -296,6 +300,8 @@ export async function renderPracticeView(ctx) {
         mode: defaultMode,
         showKeyboard,
         layout,
+        starTwo: thresholds.two,
+        starThree: thresholds.three,
         source: 'article'
       });
     });
@@ -360,6 +366,8 @@ export async function renderPracticeView(ctx) {
         mode,
         showKeyboard,
         layout,
+        starTwo: thresholds.two,
+        starThree: thresholds.three,
         source: 'words'
       });
     });

@@ -71,6 +71,13 @@ check('星级: 双达标给 3 星', evalStars({ finished: true, wpm: 30, accurac
 check('星级: 仅二星达标给 2 星', evalStars({ finished: true, wpm: 20, accuracy: 92 }, two, three) === 2);
 check('星级: 完成但未达标给 1 星', evalStars({ finished: true, wpm: 5, accuracy: 80 }, two, three) === 1);
 check('星级: 未完成给 0 星', evalStars({ finished: false, wpm: 30, accuracy: 96 }, two, three) === 0);
+// 限时场景（速度测试）：时间到时文本通常没打完，按已打内容评星
+check('星级: 限时未打完但达标给 3 星',
+  evalStars({ finished: false, typed: 60, wpm: 30, accuracy: 96 }, two, three, { requireFinished: false }) === 3);
+check('星级: 限时未打完仅二星达标给 2 星',
+  evalStars({ finished: false, typed: 40, wpm: 18, accuracy: 92 }, two, three, { requireFinished: false }) === 2);
+check('星级: 限时一字未打给 0 星',
+  evalStars({ finished: false, typed: 0, wpm: 0, accuracy: 0 }, two, three, { requireFinished: false }) === 0);
 
 // 自由模式退格：只回退位置，错误记录保留（改对仍算错过）
 const fix = new TypingEngine('abc', { mode: 'free' });
