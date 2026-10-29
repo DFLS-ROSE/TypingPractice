@@ -369,6 +369,55 @@ button { font-family: inherit; color: inherit; }
 .result-actions { display: flex; gap: 10px; }
 
 .list-panel { min-height: 440px; }
+
+/* 反应训练 */
+.reaction-body { padding: 18px 22px 24px; }
+.reaction-lead { font-size: 12.5px; color: var(--text-2); line-height: 1.75; margin: 0 0 16px; max-width: 640px; }
+.reaction-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+  margin: 18px 0 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #fbfcfd;
+}
+.reaction-char {
+  font-size: 92px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--text);
+  font-family: 'Consolas', 'Menlo', 'Courier New', monospace;
+  user-select: none;
+}
+.reaction-char.wrong { color: var(--red); animation: rx-shake 240ms ease-in; }
+.reaction-hint { margin-top: 16px; font-size: 12.5px; color: var(--text-3); }
+.reaction-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 560px;
+}
+.rx-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+}
+.rx-stat .k { font-size: 11px; color: var(--text-3); }
+.rx-stat .v { font-size: 15px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.reaction-best { font-size: 12px; color: var(--text-3); margin-top: 14px; }
+.reaction-comment { font-size: 13px; color: var(--text-2); margin: 0 0 16px; }
+@keyframes rx-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); }
+  75% { transform: translateX(7px); }
+}
 .list-actions { display: flex; align-items: center; gap: 10px; padding: 0 12px 8px; }
 .list-hint { font-size: 11.5px; color: var(--text-3); }
 .search-input {

@@ -280,6 +280,7 @@ ipcMain.on('smoke:ready', () => {
     await runSmokeDrive('driveCustomMaterial');
     await runSmokeDrive('driveOnlineMaterial');
     await runSmokeDrive('driveAiMaterial');
+    await runSmokeDrive('driveReaction');
     await runSmokeDrive('driveSettings');
     setTimeout(() => app.quit(), 400);
   }, 300);

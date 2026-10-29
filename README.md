@@ -2,7 +2,7 @@
 
 参考**金山打字通**的阶段性打字学习练习软件。Electron + 原生 HTML/CSS/JS（ES Modules，**零构建链**），课程与素材全部 JSON 数据驱动——加一节课、换一段练习文本都不用碰代码。
 
-- 版本：v1.2.1 ｜ 平台：Windows x64 ｜ 许可：MIT
+- 版本：v1.2.2 ｜ 平台：Windows x64 ｜ 许可：MIT
 
 ## 功能
 
@@ -15,6 +15,7 @@
 | 在线素材 | 「在线」tab 按关键词取素材：**主题词库**（Datamuse）、**例句短文**（Tatoeba）、**高频词表**（Google 10000）。搜到后预览 → 一键导入为词库或文章，无需手动准备 txt |
 | AI 生成素材 | 自己填大模型 API（OpenAI 兼容，DeepSeek / 通义 / Kimi / 智谱 / OpenAI 等均可），在「在线 → AI 生成」输入主题即可生成**词库**或**短文**。Key 用系统凭据加密存本机，不上传第三方 |
 | 速度测试 | 1 / 3 / 5 分钟限时，随机单词或文章两种来源，限时到自动出成绩 |
+| 反应训练 | 屏幕中央只显示一个随机字符，盯住并立刻按下对应键，测「看到 → 动手」的延迟。**三档难度**（纯小写 / 大小写混排 / 大小写数字），开始前 3 秒倒数，按平均反应时间给**分数 + 评级（S/A/B/C/D）+ 星级**，最佳纪录长期保存 |
 | 成绩统计 | 练习次数、累计时长、最佳 WPM、平均准确率、WPM 趋势图、最近记录、课程进度 |
 | 多会话保留 | 离开练习页自动暂停计时（**暂停时间不计入用时**），侧栏列出**所有进行中的练习**（标题 + 进度），可随时切回任意一个继续；最多同时保留 6 个，可单条放弃 |
 | 设置 | 默认练习模式、虚拟键盘开关、清空记录、当前版本显示与检查更新（自动更新入口） |
@@ -48,8 +49,9 @@ TypingPractice/
 │       ├── engine.js       # 打字引擎 + 星级评定（纯逻辑，可单测）
 │       ├── keyboard.js     # 虚拟键盘
 │       ├── session.js      # 练习界面（计时、结果面板、模式切换、错字符标注、暂停/恢复）
+│       ├── reaction.js     # 反应训练的纯逻辑（计分、评级、星级、统计汇总）
 │       ├── storage.js      # JSON 加载 + userData 读写封装
-│       └── views/          # tutorial / practice / test / stats / settings
+│       └── views/          # tutorial / practice / test / reaction / stats / settings
 ├── data/                   # 全部数据，改这里就等于改内容
 │   ├── curriculum.json     # 课程：阶段 → 分节 → 文本/星级标准
 │   ├── layout.json         # 键位坐标 + 八色指法配色
@@ -57,7 +59,9 @@ TypingPractice/
 ├── scripts/
 │   ├── gen-icon.mjs        # 生成应用图标 build/icon.png
 │   └── repair-records.mjs  # 清洗异常练习记录
-├── test/engine.test.mjs    # 引擎单元测试（28 项）
+├── test/                   # 单元测试
+│   ├── engine.test.mjs     # 引擎 + 星级（31 项）
+│   └── reaction.test.mjs   # 反应训练计分与评级（29 项）
 ├── build/icon.png          # 应用图标（npm run icon 可重新生成）
 └── README.md               # 本文档；RELEASE_NOTES.md 仅本机维护（已 gitignore）
 ```
@@ -120,8 +124,8 @@ TypingPractice/
 ## 测试
 
 ```bash
-npm test        # 引擎单元测试（28 项，纯逻辑）
-npm run smoke   # GUI 冒烟：自动驱动界面跑 9 条链路（下一节/测试选项/模式切换/切页保活/多会话并存与切换/素材导入含词库 tab/在线素材搜索导入/AI 生成导入/设置页版本与 AI 配置字段）
+npm test        # 单元测试（60 项，纯逻辑：引擎 31 + 反应训练 29）
+npm run smoke   # GUI 冒烟：自动驱动界面跑 10 条链路（下一节/测试选项/模式切换/切页保活/多会话并存与切换/素材导入含词库 tab/在线素材搜索导入/AI 生成导入/反应训练/设置页版本与 AI 配置字段）
 ```
 
 冒烟日志出现 `DRIVE_*` 五行且无 `_ERROR` 即通过；`--smoke` 模式下应用使用独立的临时 userData，**不会污染真实成绩**。
@@ -155,7 +159,7 @@ $env:GH_TOKEN = "ghp_xxx"
 npm run dist -- --publish always
 ```
 
-这会把安装包和 `latest.yml`（版本号、大小、sha512、下载地址）一起传到对应版本的 Release，客户端的「检查更新」即会自动发现新版本。**版本号铁律：git tag 必须与 `package.json` 的 version 一致（`v1.2.1` ↔ `1.2.1`）**，不一致时更新会静默失败。
+这会把安装包和 `latest.yml`（版本号、大小、sha512、下载地址）一起传到对应版本的 Release，客户端的「检查更新」即会自动发现新版本。**版本号铁律：git tag 必须与 `package.json` 的 version 一致（`v1.2.2` ↔ `1.2.2`）**，不一致时更新会静默失败。
 
 **自动更新机制**（`electron-updater` + GitHub Releases）：设置页「检查更新」→ 发现新版本 → 用户点「下载并安装」→ 下载完点「重启并安装」。仅**安装版**可自动更新（便携版 zip 与 `win-unpacked` 没有安装上下文）；开发模式（`npm start`）下按钮退化为「打开发行页」，不会发起检查。
 
@@ -165,7 +169,7 @@ npm run dist -- --publish always
 
 | 数据 | 位置 |
 |---|---|
-| 进度 / 星级 / 设置 | `%APPDATA%\typingpractice\user-data\progress.json` |
+| 进度 / 星级 / 设置 / 反应训练记录 | `%APPDATA%\typingpractice\user-data\progress.json` |
 | 成绩历史 | `%APPDATA%\typingpractice\user-data\history.json` |
 | 导入的素材（文章 + 词库） | `%APPDATA%\typingpractice\user-data\custom-materials.json` |
 | AI 配置（地址 / 模型 / 加密后的 Key） | `%APPDATA%\typingpractice\user-data\ai-config.json` |

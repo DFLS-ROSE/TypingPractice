@@ -1,5 +1,6 @@
 import { store } from '../storage.js';
 import { escapeHtml, fmtDateTime, fmtTime } from '../utils.js';
+import { DIFFICULTIES } from '../reaction.js';
 
 function starsHtml(n) {
   const stars = Math.max(0, Math.min(3, n || 0));
@@ -28,7 +29,15 @@ export async function renderStatsView(ctx) {
     return { cleanup() {} };
   }
 
-  if (!history.length) {
+  // 反应训练的记录存在 progress.json 里（不走 history）
+  const reaction = progress.reaction || {};
+  const reactionRuns = Array.isArray(reaction.runs) ? reaction.runs : [];
+  const rawBest = reaction.best || {};
+  // 旧版本 best 是单个对象（那时只有纯小写一档），按纯小写处理
+  const bestMap = typeof rawBest.score === 'number' ? { lower: rawBest } : rawBest;
+  const diffLabel = (id) => (DIFFICULTIES.find((d) => d.id === id) || DIFFICULTIES[0]).label;
+
+  if (!history.length && !reactionRuns.length) {
     body.innerHTML = `
       <div class="empty-hint">
         <p>还没有练习记录。</p>
@@ -83,7 +92,24 @@ export async function renderStatsView(ctx) {
     `)
     .join('');
 
+  const reactionRows = reactionRuns
+    .slice()
+    .reverse()
+    .slice(0, 10)
+    .map((r) => `
+      <tr>
+        <td>${fmtDateTime(r.ts)}</td>
+        <td>${escapeHtml(diffLabel(r.difficulty))}</td>
+        <td>${r.score}</td>
+        <td>${escapeHtml(r.grade || '')}</td>
+        <td>${r.avg} ms</td>
+        <td>${r.count || 0}</td>
+      </tr>
+    `)
+    .join('');
+
   body.innerHTML = `
+    ${history.length ? `
     <div class="summary-cards">
       <div class="card"><div class="card-num">${history.length}</div><div class="card-label">练习次数</div></div>
       <div class="card"><div class="card-num">${fmtTime(totalMs)}</div><div class="card-label">累计时长</div></div>
@@ -103,7 +129,24 @@ export async function renderStatsView(ctx) {
         <thead><tr><th>时间</th><th>内容</th><th>WPM</th><th>CPM</th><th>准确率</th><th>时长</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>
+    </div>` : ''}
+    ${reactionRuns.length ? `
+    <div class="section-block">
+      <h3>反应训练</h3>
+      <div class="summary-cards">
+        ${DIFFICULTIES.map((d) => `
+          <div class="card">
+            <div class="card-num">${bestMap[d.id] ? bestMap[d.id].score : '—'}</div>
+            <div class="card-label">${escapeHtml(d.label)}最佳分</div>
+          </div>
+        `).join('')}
+        <div class="card"><div class="card-num">${reactionRuns.length}</div><div class="card-label">训练次数</div></div>
+      </div>
+      <table class="table">
+        <thead><tr><th>时间</th><th>难度</th><th>总分</th><th>评级</th><th>平均反应</th><th>字符数</th></tr></thead>
+        <tbody>${reactionRows}</tbody>
+      </table>
+    </div>` : ''}
     ${sectionRows ? `
     <div class="section-block">
       <h3>课程进度</h3>

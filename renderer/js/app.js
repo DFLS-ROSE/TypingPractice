@@ -4,6 +4,7 @@ import { evalStars } from './engine.js';
 import { renderTutorialView } from './views/tutorial.js';
 import { renderPracticeView } from './views/practice.js';
 import { renderTestView } from './views/test.js';
+import { renderReactionView } from './views/reaction.js';
 import { renderStatsView } from './views/stats.js';
 import { renderSettingsView } from './views/settings.js';
 import { escapeHtml, popConfirm, closePopConfirm } from './utils.js';
@@ -147,6 +148,7 @@ async function renderView(view, params) {
   switch (view) {
     case 'practice': return renderPracticeView(ctx, params);
     case 'test': return renderTestView(ctx, params);
+    case 'reaction': return renderReactionView(ctx, params);
     case 'stats': return renderStatsView(ctx, params);
     case 'settings': return renderSettingsView(ctx, params);
     case 'tutorial':
@@ -603,6 +605,54 @@ if (new URLSearchParams(location.search).has('smoke')) {
 
       await window.api.saveCustomMaterials({ articles: [], lists: [] });
       return { resultTitle, importLabel, previewLen, articlesTabActive, hasBadge };
+    },
+
+    async driveReaction() {
+      document.querySelector('.nav-item[data-view="reaction"]').click();
+      await waitFor(() => document.querySelector('.view[data-ready="1"]'), 8000, '反应训练视图就绪');
+
+      // 训练长度改 10 个
+      document.querySelector('#rx-count .opt[data-n="10"]').click();
+      document.querySelector('#rx-start').click();
+      await waitFor(() => {
+        const c = document.querySelector('.reaction-char');
+        return c && /^[a-z]$/.test(c.textContent);
+      }, 8000, '字符出现');
+
+      // 逐个按下屏幕上的字母，直到 10 个都记录完
+      for (let i = 1; i <= 10; i += 1) {
+        const c = document.querySelector('.reaction-char').textContent;
+        if (!/^[a-z]$/.test(c)) throw new Error(`第 ${i} 轮屏幕上没有字母`);
+        press(c);
+        await waitFor(() => {
+          const done = document.querySelector('#rx-done').textContent;
+          return done.startsWith(String(i));
+        }, 5000, `第 ${i} 次反应被记录`);
+      }
+
+      await waitFor(() => !document.querySelector('#rx-result').classList.contains('hidden'), 8000, '结果面板出现');
+      const score = (document.querySelector('#rx-score') || {}).textContent || '';
+      const grade = (document.querySelector('#rx-grade') || {}).textContent || '';
+      const stars = (document.querySelector('#rx-grid .result-num.stars') || {}).textContent || '';
+      const best = (document.querySelector('#rx-best') || {}).textContent || '';
+      const lenLabel = (document.querySelector('#rx-count .opt.active') || {}).textContent || '';
+      const diffLabel = (document.querySelector('#rx-diff .opt.active') || {}).textContent || '';
+
+      // 再切一档难度（大小写混排），验证字符池与大写精确匹配
+      document.querySelector('#rx-diff .opt[data-d="mixed"]').click();
+      document.querySelector('#rx-start').click();
+      await waitFor(() => {
+        const c = document.querySelector('.reaction-char');
+        return c && /^[a-zA-Z]$/.test(c.textContent);
+      }, 8000, '难度切换后字符出现');
+      const mixedChar = document.querySelector('.reaction-char').textContent;
+      press(mixedChar);
+      await waitFor(() => {
+        const done = document.querySelector('#rx-done').textContent;
+        return done.startsWith('1');
+      }, 5000, '大写字符也能正确记录');
+
+      return { score, grade, stars, best, lenLabel, diffLabel, mixedChar };
     },
 
     async driveSettings() {
