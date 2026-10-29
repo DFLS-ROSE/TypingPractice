@@ -24,17 +24,35 @@ export function fmtTime(ms) {
 let popEl = null;
 let popCleanup = null;
 
-export function closePopConfirm() {
+export function closePopConfirm(immediate = false) {
   if (popCleanup) {
     popCleanup();
     popCleanup = null;
   }
-  if (popEl && popEl.parentNode) popEl.parentNode.removeChild(popEl);
+  const el = popEl;
   popEl = null;
+  if (!el) return;
+  if (immediate) {
+    el.remove();
+    return;
+  }
+  // 先播退场动画再移除；animationend 没等到（系统开了「减少动态效果」）也会被兜底清掉
+  el.classList.remove('is-in');
+  el.classList.add('is-closing');
+  let removed = false;
+  const done = () => {
+    if (removed) return;
+    removed = true;
+    el.remove();
+  };
+  el.addEventListener('animationend', done, { once: true });
+  setTimeout(done, 220);
 }
 
 export function popConfirm(anchor, message, onConfirm, opts = {}) {
-  closePopConfirm();
+  // 立刻清掉可能还在退场中的旧气泡，避免叠在一起
+  document.querySelectorAll('.popconfirm').forEach((n) => n.remove());
+  closePopConfirm(true);
   if (!anchor) return;
   const { confirmText = '确定', cancelText = '取消' } = opts;
 
@@ -54,11 +72,20 @@ export function popConfirm(anchor, message, onConfirm, opts = {}) {
   const pw = pop.offsetWidth;
   const ph = pop.offsetHeight;
   let left = rect.right + 8;
-  if (left + pw > window.innerWidth - 8) left = Math.max(8, rect.left - pw - 8);
+  let side = 'right';
+  if (left + pw > window.innerWidth - 8) {
+    left = Math.max(8, rect.left - pw - 8);
+    side = 'left';
+  }
   let top = rect.top + rect.height / 2 - ph / 2;
   top = Math.max(8, Math.min(top, window.innerHeight - ph - 8));
   pop.style.left = `${left}px`;
   pop.style.top = `${top}px`;
+  // 动画方向跟着出现方向走：从按钮那一侧滑入
+  pop.dataset.side = side;
+  // 定位与方向都定好之后再启动入场动画，否则会先按默认方向闪一下
+  void pop.offsetWidth;
+  pop.classList.add('is-in');
 
   const onDocDown = (e) => {
     if (pop.contains(e.target) || anchor === e.target || anchor.contains(e.target)) return;
