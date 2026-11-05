@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('api', {
   aiSaveConfig: (config) => ipcRenderer.invoke('ai:saveConfig', config),
   aiTest: (config) => ipcRenderer.invoke('ai:test', config),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  isStoreBuild: () => process.windowsStore,
   openReleases: () => ipcRenderer.invoke('app:openReleases'),
   checkUpdate: () => ipcRenderer.invoke('app:checkUpdate'),
   downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),

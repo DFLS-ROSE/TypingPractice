@@ -9,7 +9,8 @@
     "icon": "node scripts/gen-icon.mjs",
     "test": "node test/engine.test.mjs && node test/reaction.test.mjs",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "dist:store": "node scripts/build-store.mjs"
   },
   "license": "MIT",
   "releaseUrl": "https://github.com/DFLS-ROSE/TypingPractice/releases",

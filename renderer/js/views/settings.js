@@ -109,11 +109,20 @@ export async function renderSettingsView(ctx) {
     verEl.textContent = '未知';
   }
 
+  // 微软商店版（MSIX）由 Store 统一负责更新，禁用自带更新器（商店政策禁止应用内自更新）
+  const isStore = await window.api.isStoreBuild();
+  if (isStore) {
+    updateBtn.textContent = '应用商店版';
+    updateBtn.disabled = true;
+    updateMsg.textContent = '由 Microsoft Store 负责更新';
+  }
+
   // 检查更新：开发模式下退化为「打开发行页」；打包后走完整的
   // 检查 → 下载 → 重启安装 流程（electron-updater + GitHub Releases）
   let state = { status: 'idle', percent: 0, message: '' };
 
   function renderUpdate() {
+    if (isStore) return; // 商店版不渲染更新状态，保持禁用态
     const s = state;
     switch (s.status) {
       case 'dev':
@@ -164,6 +173,7 @@ export async function renderSettingsView(ctx) {
   });
 
   updateBtn.addEventListener('click', async (e) => {
+    if (isStore) return; // 商店版禁用更新按钮
     e.currentTarget.blur();
     if (state.status === 'dev') {
       updateMsg.textContent = '正在打开发行页…';

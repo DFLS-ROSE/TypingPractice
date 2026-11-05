@@ -2,7 +2,12 @@ const { app, BrowserWindow, dialog, ipcMain, protocol, shell } = require('electr
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
-const { autoUpdater } = require('electron-updater');
+// 商店版（MSIX）不加载 electron-updater：更新完全交给 Microsoft Store（商店政策禁止应用内自更新）。
+// 非商店版（NSIS / 便携 / 开发）仍走 GitHub Releases 自动更新。
+let autoUpdater = null;
+if (!process.windowsStore) {
+  ({ autoUpdater } = require('electron-updater'));
+}
 const { searchOnline, mockSearch } = require('./online.js');
 const ai = require('./ai.js');
 
@@ -205,7 +210,8 @@ function setUpdateState(patch) {
 }
 
 function initAutoUpdater() {
-  if (!app.isPackaged) return;
+  // 微软商店版（MSIX）由 Store 统一负责更新，禁用自带更新器（商店政策禁止应用内自更新）
+  if (!app.isPackaged || process.windowsStore) return;
 
   // 不自动下载：检查到新版本后由用户点「下载并安装」，配合进度显示
   autoUpdater.autoDownload = false;
@@ -232,9 +238,12 @@ function initAutoUpdater() {
 }
 
 ipcMain.handle('app:checkUpdate', async () => {
-  if (!app.isPackaged) {
-    setUpdateState({ status: 'dev', message: '开发模式下不检查更新' });
-    return { ok: false, dev: true };
+  if (!app.isPackaged || process.windowsStore) {
+    setUpdateState({
+      status: process.windowsStore ? 'store' : 'dev',
+      message: process.windowsStore ? '应用商店版由 Microsoft Store 负责更新' : '开发模式下不检查更新'
+    });
+    return { ok: false, dev: !app.isPackaged, store: process.windowsStore };
   }
   try {
     await autoUpdater.checkForUpdates();
@@ -245,7 +254,7 @@ ipcMain.handle('app:checkUpdate', async () => {
 });
 
 ipcMain.handle('app:downloadUpdate', async () => {
-  if (!app.isPackaged) return { ok: false, dev: true };
+  if (!app.isPackaged || process.windowsStore) return { ok: false, dev: !app.isPackaged, store: process.windowsStore };
   try {
     await autoUpdater.downloadUpdate();
     return { ok: true };
@@ -255,7 +264,7 @@ ipcMain.handle('app:downloadUpdate', async () => {
 });
 
 ipcMain.handle('app:installUpdate', () => {
-  if (!app.isPackaged) return { ok: false, dev: true };
+  if (!app.isPackaged || process.windowsStore) return { ok: false, dev: !app.isPackaged, store: process.windowsStore };
   autoUpdater.quitAndInstall(false, true);
   return { ok: true };
 });
